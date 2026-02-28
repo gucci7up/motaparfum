@@ -182,7 +182,7 @@ function PublicCatalog({ onGoToAdmin, settings }: { onGoToAdmin: () => void, set
                       <img
                         src={product.image}
                         alt={product.name}
-                        className="w-full h-full object-cover rounded-lg drop-shadow-2xl"
+                        className="w-full h-full object-contain rounded-lg drop-shadow-2xl"
                         referrerPolicy="no-referrer"
                       />
                     </div>
