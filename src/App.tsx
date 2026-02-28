@@ -528,8 +528,8 @@ function OverviewTab({ products, leadsCount }: { products: Product[], leadsCount
                     <td className="px-6 py-3 text-primary font-bold">RD$ {p.price.toLocaleString()}</td>
                     <td className="px-6 py-3">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${p.status === 'In Stock' ? 'bg-emerald-500/20 text-emerald-400'
-                          : p.status === 'Low Stock' ? 'bg-amber-500/20 text-amber-400'
-                            : 'bg-red-500/20 text-red-400'
+                        : p.status === 'Low Stock' ? 'bg-amber-500/20 text-amber-400'
+                          : 'bg-red-500/20 text-red-400'
                         }`}>{p.status}</span>
                     </td>
                   </tr>
@@ -1510,14 +1510,14 @@ function CartModal({ cart, settings, onClose, onRemove, onClear, lang }: {
   onClear: () => void;
   lang: 'en' | 'es';
 }) {
-  const total = cart.reduce((sum, p) => sum + p.price, 0);
+  const total = cart.reduce((sum, p) => sum + Number(p.price), 0);
 
   const handleCheckout = () => {
     if (cart.length === 0) return;
     const whatsapp = (settings?.whatsapp_number || '').replace(/[^0-9]/g, '');
     if (!whatsapp) { alert('WhatsApp number not configured.'); return; }
 
-    const items = cart.map(p => `• ${p.name} (${p.brand}) — RD$ ${p.price.toLocaleString()}`).join('\n');
+    const items = cart.map(p => `• ${p.name} (${p.brand}) — RD$ ${Number(p.price).toLocaleString()}`).join('\n');
     const msg = lang === 'es'
       ? `¡Hola! Estoy interesado/a en los siguientes perfumes:\n\n${items}\n\n*Total: RD$ ${total.toLocaleString()}*\n\n¿Me pueden confirmar disponibilidad y opciones de envío?`
       : `Hello! I'm interested in the following perfumes:\n\n${items}\n\n*Total: RD$ ${total.toLocaleString()}*\n\nCan you confirm availability and shipping options?`;
@@ -1554,14 +1554,23 @@ function CartModal({ cart, settings, onClose, onRemove, onClear, lang }: {
             cart.map(product => (
               <div key={product.id} className="flex items-center justify-between gap-3 py-2 border-b border-white/5 last:border-0">
                 <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />
+                  {/* Product thumbnail */}
+                  <div className="w-12 h-12 rounded-lg bg-background-dark border border-white/10 overflow-hidden flex-shrink-0">
+                    {product.image ? (
+                      <img src={product.image} alt={product.name} className="w-full h-full object-contain p-1" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Package size={16} className="text-slate-600" />
+                      </div>
+                    )}
+                  </div>
                   <div>
                     <p className="text-sm font-semibold text-slate-200">{product.name}</p>
                     <p className="text-xs text-slate-500">{product.brand}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0">
-                  <span className="text-primary font-bold text-sm">RD$ {product.price.toLocaleString()}</span>
+                  <span className="text-primary font-bold text-sm">RD$ {Number(product.price).toLocaleString()}</span>
                   <button onClick={() => onRemove(product.id)} className="text-slate-600 hover:text-red-400 transition-colors">
                     <X size={14} />
                   </button>
