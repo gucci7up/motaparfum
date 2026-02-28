@@ -52,6 +52,9 @@ export default function App() {
         if (data.primary_color) {
           document.documentElement.style.setProperty('--color-primary', data.primary_color);
         }
+        if (data.store_name) {
+          document.title = data.store_name;
+        }
       })
       .catch(console.error);
   }, []);
