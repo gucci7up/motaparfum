@@ -52,24 +52,16 @@ switch ($method) {
             $isUpdate = isset($_GET['id']) || isset($_POST['_method']) && $_POST['_method'] === 'PUT';
             $updateId = isset($_GET['id']) ? $_GET['id'] : null;
 
-            // Handle File Upload
+            // Handle image: convert to base64 and store in DB (no filesystem writes needed)
             $imagePath = '';
             if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-                $uploadDir = __DIR__ . '/uploads/';
-                if (!is_dir($uploadDir)) {
-                    mkdir($uploadDir, 0777, true);
-                }
-                $fileExt = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
-                $fileName = uniqid() . '.' . $fileExt;
-                $targetFile = $uploadDir . $fileName;
-
-                if (move_uploaded_file($_FILES['image']['tmp_name'], $targetFile)) {
-                    $imagePath = '/api/uploads/' . $fileName;
-                }
+                $file = $_FILES['image'];
+                $mime = mime_content_type($file['tmp_name']);
+                $b64 = base64_encode(file_get_contents($file['tmp_name']));
+                $imagePath = "data:{$mime};base64,{$b64}";
             } else {
-                // Determine if we need to keep existing image during update
+                // Keep existing image during update, or use URL if provided
                 if ($isUpdate && empty($_POST['image'])) {
-                    // Try getting existing image
                     $stmt = $pdo->prepare("SELECT image FROM products WHERE id = ?");
                     $stmt->execute([$updateId]);
                     $existing = $stmt->fetch();

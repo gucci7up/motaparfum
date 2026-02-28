@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS `products` (
   `price` decimal(10,2) NOT NULL,
   `status` enum('In Stock','Low Stock','Out of Stock') NOT NULL DEFAULT 'In Stock',
   `stock` int(11) NOT NULL DEFAULT '0',
-  `image` text NOT NULL,
+  `image` longtext NOT NULL,
   `gender` enum('Hombres','Mujeres','Unisex') NOT NULL,
   `brand` varchar(255) NOT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,

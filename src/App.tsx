@@ -513,10 +513,15 @@ function ProductsTab({ products, categories, onDelete, onRefresh }: { products: 
               {products.map((product) => (
                 <tr key={product.id} className="hover:bg-primary/5 transition-colors group">
                   <td className="px-8 py-5">
-                    <div
-                      className="w-14 h-14 rounded-lg bg-neutral-border bg-center bg-no-repeat bg-cover border border-primary/10 overflow-hidden"
-                      style={{ backgroundImage: `url(${product.image})` }}
-                    />
+                    <div className="w-14 h-14 rounded-lg bg-neutral-border border border-primary/10 overflow-hidden flex-shrink-0">
+                      {product.image ? (
+                        <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-600">
+                          <Package size={20} />
+                        </div>
+                      )}
+                    </div>
                   </td>
                   <td className="px-8 py-5">
                     <div className="flex flex-col">
