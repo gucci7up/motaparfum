@@ -29,21 +29,42 @@ import {
   X
 } from 'lucide-react';
 import { Product, Stat, Category } from './types';
+import { t, getBrowserLanguage } from './i18n';
+
+export interface AppSettings {
+  store_name: string;
+  support_email: string;
+  whatsapp_number: string;
+  primary_color: string;
+}
 
 export default function App() {
   const [view, setView] = useState<'catalog' | 'login' | 'admin'>('catalog');
+  const [settings, setSettings] = useState<AppSettings | null>(null);
+
+  useEffect(() => {
+    fetch('/api/settings.php')
+      .then(res => res.json())
+      .then((data: AppSettings) => {
+        setSettings(data);
+        if (data.primary_color) {
+          document.documentElement.style.setProperty('--color-primary', data.primary_color);
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background-dark text-slate-100 selection:bg-primary/30">
       <AnimatePresence mode="wait">
         {view === 'catalog' && (
-          <PublicCatalog onGoToAdmin={() => setView('login')} />
+          <PublicCatalog onGoToAdmin={() => setView('login')} settings={settings} />
         )}
         {view === 'login' && (
           <LoginScreen onLoginSuccess={() => setView('admin')} onGoToCatalog={() => setView('catalog')} />
         )}
         {view === 'admin' && (
-          <DashboardScreen onGoToCatalog={() => setView('catalog')} onLogout={() => {
+          <DashboardScreen onGoToCatalog={() => setView('catalog')} settings={settings} onLogout={() => {
             localStorage.removeItem('admin_token');
             setView('login');
           }} />
@@ -53,8 +74,9 @@ export default function App() {
   );
 }
 
-function PublicCatalog({ onGoToAdmin }: { onGoToAdmin: () => void }) {
+function PublicCatalog({ onGoToAdmin, settings }: { onGoToAdmin: () => void, settings: AppSettings | null }) {
   const [products, setProducts] = useState<Product[]>([]);
+  const lang = getBrowserLanguage();
 
   useEffect(() => {
     fetch('/api/products.php')
@@ -79,9 +101,9 @@ function PublicCatalog({ onGoToAdmin }: { onGoToAdmin: () => void }) {
           <span className="text-lg md:text-xl font-bold tracking-tight uppercase">PerfumeStore <span className="text-primary">RD</span></span>
         </div>
         <div className="hidden md:flex items-center gap-8 glass-card px-8 py-2.5 rounded-full">
-          <a className="text-sm font-medium hover:text-primary transition-colors" href="#">Inicio</a>
-          <a className="text-sm font-medium hover:text-primary transition-colors" href="#">Novedades</a>
-          <a className="text-sm font-medium hover:text-primary transition-colors" href="#">Ofertas</a>
+          <a className="text-sm font-medium hover:text-primary transition-colors" href="#">{t(lang, 'nav_home')}</a>
+          <a className="text-sm font-medium hover:text-primary transition-colors" href="#">{t(lang, 'nav_new')}</a>
+          <a className="text-sm font-medium hover:text-primary transition-colors" href="#">{t(lang, 'nav_offers')}</a>
         </div>
         <div className="flex items-center gap-4">
           <button className="glass-card p-2.5 rounded-full hover:bg-white/10 transition-colors">
@@ -113,7 +135,7 @@ function PublicCatalog({ onGoToAdmin }: { onGoToAdmin: () => void }) {
               {cat === 'Hombres' && <User className="size-4" />}
               {cat === 'Mujeres' && <User className="size-4" />}
               {cat === 'Unisex' && <LayoutGrid className="size-4" />}
-              {cat}
+              {t(lang, cat === 'Hombres' ? 'cat_men' : cat === 'Mujeres' ? 'cat_women' : 'cat_unisex')}
             </a>
           ))}
         </div>
@@ -121,14 +143,14 @@ function PublicCatalog({ onGoToAdmin }: { onGoToAdmin: () => void }) {
 
       <main className="relative pt-44 pb-32 px-4 md:px-12 max-w-7xl mx-auto">
         <header className="text-center mb-24">
-          <h1 className="text-4xl md:text-7xl font-bold mb-6 tracking-tighter">Catálogo <span className="text-primary">Exclusivo</span></h1>
-          <p className="text-slate-400 text-base md:text-lg max-w-2xl mx-auto">Descubre nuestra selección curada de fragancias de lujo. Calidad premium con entrega rápida en toda la República Dominicana.</p>
+          <h1 className="text-4xl md:text-7xl font-bold mb-6 tracking-tighter">{t(lang, 'hero_title')} <span className="text-primary">{t(lang, 'hero_title_highlight')}</span></h1>
+          <p className="text-slate-400 text-base md:text-lg max-w-2xl mx-auto">{t(lang, 'hero_subtitle')}</p>
         </header>
 
         {['Hombres', 'Mujeres', 'Unisex'].map((gender) => (
           <section key={gender} className="mb-48 scroll-mt-48" id={gender.toLowerCase()}>
             <div className="flex items-center gap-4 mb-12 border-l-4 border-primary pl-6">
-              <h2 className="text-3xl md:text-4xl font-bold uppercase tracking-widest">{gender}</h2>
+              <h2 className="text-3xl md:text-4xl font-bold uppercase tracking-widest">{t(lang, gender === 'Hombres' ? 'cat_men' : gender === 'Mujeres' ? 'cat_women' : 'cat_unisex')}</h2>
               <div className="h-px flex-1 bg-gradient-to-r from-white/20 to-transparent"></div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-24 gap-x-12 mb-20">
@@ -149,16 +171,16 @@ function PublicCatalog({ onGoToAdmin }: { onGoToAdmin: () => void }) {
                     <h3 className="text-xl font-bold mb-1">{product.name}</h3>
                     <p className="text-slate-400 text-sm mb-3">{product.brand}</p>
                     <p className="text-primary font-bold text-2xl mb-5">RD$ {product.price.toLocaleString()}</p>
-                    <button className="w-full py-3.5 bg-primary text-background-dark font-black rounded-xl flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(242,185,13,0.4)] transition-all uppercase text-xs">
-                      <MessageSquare className="size-5" /> Comprar vía WhatsApp
-                    </button>
+                    <a href={`https://wa.me/${settings?.whatsapp_number?.replace(/[^0-9]/g, '') || ''}?text=${encodeURIComponent(t(lang, 'hello_whatsapp'))}%20${encodeURIComponent(product.name)}`} target="_blank" className="w-full py-3.5 bg-primary text-background-dark font-black rounded-xl flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(242,185,13,0.4)] transition-all uppercase text-xs">
+                      <MessageSquare className="size-5" /> {t(lang, 'buy_whatsapp')}
+                    </a>
                   </div>
                 </div>
               ))}
             </div>
             <div className="flex justify-center">
               <button className="group relative px-10 py-4 border border-primary/40 hover:border-primary rounded-full transition-all duration-300 flex items-center gap-3">
-                <span className="text-primary font-bold tracking-widest uppercase text-sm">Ver más productos</span>
+                <span className="text-primary font-bold tracking-widest uppercase text-sm">{t(lang, 'see_more')}</span>
                 <ArrowRight className="text-primary group-hover:translate-x-1 transition-transform" />
                 <div className="absolute inset-0 rounded-full bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
               </button>
@@ -174,9 +196,9 @@ function PublicCatalog({ onGoToAdmin }: { onGoToAdmin: () => void }) {
               <div className="p-2 bg-primary/20 rounded-lg text-primary">
                 <Diamond className="size-6 font-bold" />
               </div>
-              <span className="text-xl font-bold tracking-tight uppercase">PerfumeStore <span className="text-primary">RD</span></span>
+              <span className="text-xl font-bold tracking-tight uppercase">{settings?.store_name || 'PerfumeStore RD'}</span>
             </div>
-            <p className="text-slate-500 max-w-md text-sm">Los mejores perfumes originales en Santo Domingo, Santiago y todo el país. Calidad garantizada en cada atomización.</p>
+            <p className="text-slate-500 max-w-md text-sm">{t(lang, 'footer_desc')}</p>
             <div className="flex gap-4">
               <a className="w-10 h-10 rounded-full glass-card flex items-center justify-center hover:text-primary transition-colors" href="#">
                 <Share2 className="size-5" />
@@ -185,7 +207,7 @@ function PublicCatalog({ onGoToAdmin }: { onGoToAdmin: () => void }) {
                 <MapPin className="size-5" />
               </a>
             </div>
-            <p className="text-[10px] text-slate-600 uppercase tracking-widest mt-4">© 2024 PerfumeStore RD - Todos los derechos reservados</p>
+            <p className="text-[10px] text-slate-600 uppercase tracking-widest mt-4">© {new Date().getFullYear()} {settings?.store_name || 'PerfumeStore RD'} - {t(lang, 'footer_rights')}</p>
           </div>
         </div>
       </footer>
@@ -195,7 +217,7 @@ function PublicCatalog({ onGoToAdmin }: { onGoToAdmin: () => void }) {
         <div className="glass-card p-2 rounded-full flex items-center justify-between shadow-2xl border-white/20">
           <button className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-background-dark rounded-full font-bold transition-all text-xs md:text-sm">
             <LayoutGrid className="size-5" />
-            <span>Catálogo</span>
+            <span>{t(lang, 'floating_catalog')}</span>
           </button>
           <div className="flex-1 flex justify-around items-center px-2">
             <a className="p-2 text-slate-400 hover:text-primary transition-colors" href="#hombres">
@@ -214,7 +236,7 @@ function PublicCatalog({ onGoToAdmin }: { onGoToAdmin: () => void }) {
   );
 }
 
-function DashboardScreen({ onGoToCatalog, onLogout }: { onGoToCatalog: () => void, onLogout: () => void }) {
+function DashboardScreen({ onGoToCatalog, onLogout, settings }: { onGoToCatalog: () => void, onLogout: () => void, settings: AppSettings | null }) {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'products' | 'orders' | 'leads' | 'settings'>('dashboard');
   const [products, setProducts] = useState<Product[]>([]);
   const [stats, setStats] = useState<Stat[]>([]);
@@ -353,7 +375,7 @@ function DashboardScreen({ onGoToCatalog, onLogout }: { onGoToCatalog: () => voi
           {activeTab === 'products' && <ProductsTab products={products} categories={categories} onDelete={handleDelete} onRefresh={fetchData} />}
           {activeTab === 'orders' && <OrdersTab />}
           {activeTab === 'leads' && <LeadsTab />}
-          {activeTab === 'settings' && <SettingsTab onRefresh={fetchData} />}
+          {activeTab === 'settings' && <SettingsTab onRefresh={fetchData} settings={settings} />}
         </div>
 
         <footer className="flex items-center justify-between text-[10px] text-slate-500 uppercase tracking-widest font-bold border-t border-neutral-border pt-6 pb-10">
@@ -600,7 +622,41 @@ function LeadsTab() {
   );
 }
 
-function SettingsTab({ onRefresh }: { onRefresh: () => void }) {
+function SettingsTab({ onRefresh, settings }: { onRefresh: () => void, settings: AppSettings | null }) {
+  const [formData, setFormData] = useState<AppSettings>(settings || {
+    store_name: 'Luxury Perfume RD',
+    support_email: 'support@motaparfum.store',
+    whatsapp_number: '+1 809 555 0199',
+    primary_color: '#F2B90D'
+  });
+  const [loading, setLoading] = useState(false);
+
+  const handleSave = async () => {
+    setLoading(true);
+    const token = localStorage.getItem('admin_token');
+    try {
+      const res = await fetch('/api/settings.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(formData)
+      });
+      if (res.ok) {
+        alert('Settings saved successfully! Refreshing...');
+        // Refresh page to apply new CSS token to root config easily
+        window.location.reload();
+      } else {
+        alert('Failed to save settings.');
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleReset = async () => {
     if (confirm('Are you ABSOLUTELY sure you want to delete ALL store data? This action cannot be undone.')) {
       const token = localStorage.getItem('admin_token');
@@ -629,18 +685,26 @@ function SettingsTab({ onRefresh }: { onRefresh: () => void }) {
       <div className="p-8 flex flex-col gap-6">
         <label className="flex flex-col gap-2">
           <span className="text-sm font-semibold text-slate-400">Store Name</span>
-          <input type="text" defaultValue="Luxury Perfume RD" className="w-full bg-background-dark border border-neutral-border rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none text-slate-100 transition-shadow" />
+          <input type="text" value={formData.store_name} onChange={e => setFormData({ ...formData, store_name: e.target.value })} className="w-full bg-background-dark border border-neutral-border rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none text-slate-100 transition-shadow" />
         </label>
         <label className="flex flex-col gap-2">
           <span className="text-sm font-semibold text-slate-400">Support Email</span>
-          <input type="email" defaultValue="support@motaparfum.store" className="w-full bg-background-dark border border-neutral-border rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none text-slate-100 transition-shadow" />
+          <input type="email" value={formData.support_email} onChange={e => setFormData({ ...formData, support_email: e.target.value })} className="w-full bg-background-dark border border-neutral-border rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none text-slate-100 transition-shadow" />
         </label>
         <label className="flex flex-col gap-2">
           <span className="text-sm font-semibold text-slate-400">WhatsApp Number</span>
-          <input type="tel" defaultValue="+1 809 555 0199" className="w-full bg-background-dark border border-neutral-border rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none text-slate-100 transition-shadow" />
+          <input type="tel" value={formData.whatsapp_number} onChange={e => setFormData({ ...formData, whatsapp_number: e.target.value })} className="w-full bg-background-dark border border-neutral-border rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none text-slate-100 transition-shadow" />
         </label>
-        <button className="mt-4 bg-primary hover:bg-primary/90 text-background-dark py-3.5 rounded-lg text-sm font-bold w-full transition-transform active:scale-95 shadow-lg shadow-primary/20 uppercase tracking-widest">
-          Save Changes
+        <label className="flex flex-col gap-2">
+          <span className="text-sm font-semibold text-slate-400">Theme Primary Color</span>
+          <div className="flex gap-4">
+            <input type="color" value={formData.primary_color} onChange={e => setFormData({ ...formData, primary_color: e.target.value })} className="w-16 h-12 bg-background-dark border border-neutral-border rounded-lg cursor-pointer" />
+            <input type="text" value={formData.primary_color} onChange={e => setFormData({ ...formData, primary_color: e.target.value })} className="flex-1 bg-background-dark border border-neutral-border rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none text-slate-100 transition-shadow font-mono" />
+          </div>
+        </label>
+
+        <button onClick={handleSave} disabled={loading} className="mt-4 bg-primary hover:bg-primary/90 text-background-dark py-3.5 rounded-lg text-sm font-bold w-full transition-transform active:scale-95 shadow-lg shadow-primary/20 uppercase tracking-widest disabled:opacity-50">
+          {loading ? 'Saving...' : 'Save Changes'}
         </button>
 
         <div className="mt-8 border-t border-red-500/20 pt-8">
