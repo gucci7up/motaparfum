@@ -79,43 +79,26 @@ if ($method === 'GET') {
         $pdo->beginTransaction();
         $stmt = $pdo->prepare('INSERT INTO settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?');
 
-        if ($data) {
-            foreach ($data as $key => $value) {
-                if ($key !== 'store_logo_file') {
-                    $stmt->execute([$key, $value, $value]);
-                }
-            }
+        // Read base64 logo from file upload (convert in PHP, store in DB - no filesystem needed)
+        if (isset($_FILES['store_logo_file']) && $_FILES['store_logo_file']['error'] === UPLOAD_ERR_OK) {
+            $file = $_FILES['store_logo_file'];
+            $mime = mime_content_type($file['tmp_name']);
+            $b64data = base64_encode(file_get_contents($file['tmp_name']));
+            $dataUrl = "data:{$mime};base64,{$b64data}";
+            $stmt->execute(['store_logo', $dataUrl, $dataUrl]);
+        } elseif (!empty($data) && array_key_exists('store_logo', $data)) {
+            // URL-based logo passed as a regular form field
+            $val = $data['store_logo'];
+            $stmt->execute(['store_logo', $val, $val]);
         }
 
-        // Handle file upload
-        if (isset($_FILES['store_logo_file'])) {
-            if ($_FILES['store_logo_file']['error'] === UPLOAD_ERR_OK) {
-                $uploadDir = __DIR__ . '/uploads/';
-                if (!is_dir($uploadDir)) {
-                    if (!mkdir($uploadDir, 0777, true)) {
-                        throw new PDOException('Failed to create uploads directory.');
-                    }
+        // Save all other fields (skip raw logo keys already handled)
+        $skip = ['store_logo_file', 'store_logo'];
+        if ($data) {
+            foreach ($data as $key => $value) {
+                if (!in_array($key, $skip)) {
+                    $stmt->execute([$key, $value, $value]);
                 }
-
-                $file = $_FILES['store_logo_file'];
-                $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-                $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
-
-                if (in_array($extension, $allowedExtensions)) {
-                    $filename = 'logo_' . time() . '.' . $extension;
-                    $targetPath = $uploadDir . $filename;
-
-                    if (move_uploaded_file($file['tmp_name'], $targetPath)) {
-                        $fileUrl = '/api/uploads/' . $filename;
-                        $stmt->execute(['store_logo', $fileUrl, $fileUrl]);
-                    } else {
-                        throw new PDOException('Failed to move uploaded file.');
-                    }
-                } else {
-                    throw new PDOException('Invalid file extension.');
-                }
-            } else {
-                throw new PDOException('Upload error: ' . $_FILES['store_logo_file']['error']);
             }
         }
 
