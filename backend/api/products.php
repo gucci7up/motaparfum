@@ -48,12 +48,93 @@ switch ($method) {
         }
 
         if ($method === 'POST') {
-            $data = json_decode(file_get_contents('php://input'), true);
-            if (!$data) {
-                http_response_code(400);
-                echo json_encode(['error' => 'Invalid JSON']);
-                break;
+            // Check if it's an update disguised as POST (due to FormData limits with PUT)
+            $isUpdate = isset($_GET['id']) || isset($_POST['_method']) && $_POST['_method'] === 'PUT';
+            $updateId = isset($_GET['id']) ? $_GET['id'] : null;
+
+            // Handle File Upload
+            $imagePath = '';
+            if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+                $uploadDir = __DIR__ . '/uploads/';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0777, true);
+                }
+                $fileExt = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
+                $fileName = uniqid() . '.' . $fileExt;
+                $targetFile = $uploadDir . $fileName;
+
+                if (move_uploaded_file($_FILES['image']['tmp_name'], $targetFile)) {
+                    $imagePath = '/api/uploads/' . $fileName;
+                }
+            } else {
+                // Determine if we need to keep existing image during update
+                if ($isUpdate && empty($_POST['image'])) {
+                    // Try getting existing image
+                    $stmt = $pdo->prepare("SELECT image FROM products WHERE id = ?");
+                    $stmt->execute([$updateId]);
+                    $existing = $stmt->fetch();
+                    $imagePath = $existing ? $existing['image'] : '';
+                } else {
+                    $imagePath = $_POST['image'] ?? '';
+                }
             }
+
+            $name = $_POST['name'] ?? '';
+            $sku = $_POST['sku'] ?? '';
+            $category = $_POST['category'] ?? '';
+            $price = $_POST['price'] ?? 0;
+            $stock = $_POST['stock'] ?? 0;
+            $status = $_POST['status'] ?? 'In Stock';
+            $gender = $_POST['gender'] ?? 'Unisex';
+            $brand = $_POST['brand'] ?? '';
+
+            if (!$isUpdate) {
+                $id = uniqid();
+                $sql = "INSERT INTO products (id, name, sku, category, price, stock, status, image, gender, brand) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                try {
+                    $stmt = $pdo->prepare($sql);
+                    $stmt->execute([
+                        $id,
+                        $name,
+                        $sku,
+                        $category,
+                        $price,
+                        $stock,
+                        $status,
+                        $imagePath,
+                        $gender,
+                        $brand
+                    ]);
+                    http_response_code(201);
+                    echo json_encode(['id' => $id, 'message' => 'Product created', 'image' => $imagePath]);
+                } catch (PDOException $e) {
+                    http_response_code(500);
+                    echo json_encode(['error' => $e->getMessage()]);
+                }
+            } else {
+                $sql = "UPDATE products SET name=?, sku=?, category=?, price=?, stock=?, status=?, image=?, gender=?, brand=? WHERE id=?";
+                try {
+                    $stmt = $pdo->prepare($sql);
+                    $stmt->execute([
+                        $name,
+                        $sku,
+                        $category,
+                        $price,
+                        $stock,
+                        $status,
+                        $imagePath,
+                        $gender,
+                        $brand,
+                        $updateId
+                    ]);
+                    echo json_encode(['message' => 'Product updated', 'image' => $imagePath]);
+                } catch (PDOException $e) {
+                    http_response_code(500);
+                    echo json_encode(['error' => $e->getMessage()]);
+                }
+            }
+        } elseif ($method === 'PUT') {
 
             $id = uniqid();
             $sql = "INSERT INTO products (id, name, sku, category, price, status, image, gender, brand) 
@@ -85,7 +166,7 @@ switch ($method) {
                 break;
             }
 
-            $sql = "UPDATE products SET name=?, sku=?, category=?, price=?, status=?, image=?, gender=?, brand=? WHERE id=?";
+            $sql = "UPDATE products SET name=?, sku=?, category=?, price=?, stock=?, status=?, image=?, gender=?, brand=? WHERE id=?";
             try {
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute([
@@ -93,6 +174,7 @@ switch ($method) {
                     $data['sku'],
                     $data['category'],
                     $data['price'],
+                    $data['stock'] ?? 0,
                     $data['status'],
                     $data['image'],
                     $data['gender'],

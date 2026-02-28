@@ -4,6 +4,7 @@ export interface Product {
   sku: string;
   category: string;
   price: number;
+  stock: number;
   status: 'In Stock' | 'Low Stock' | 'Out of Stock';
   image: string;
   gender: 'Hombres' | 'Mujeres' | 'Unisex';

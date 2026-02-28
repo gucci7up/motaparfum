@@ -429,6 +429,7 @@ function ProductsTab({ products, categories, onDelete, onRefresh }: { products: 
                 <th className="px-8 py-4">Product Name</th>
                 <th className="px-8 py-4">Category</th>
                 <th className="px-8 py-4">Price (DOP)</th>
+                <th className="px-8 py-4">Stock</th>
                 <th className="px-8 py-4">Status</th>
                 <th className="px-8 py-4 text-right">Actions</th>
               </tr>
@@ -455,6 +456,9 @@ function ProductsTab({ products, categories, onDelete, onRefresh }: { products: 
                   </td>
                   <td className="px-8 py-5">
                     <span className="text-sm font-bold text-slate-100">${product.price.toLocaleString()}</span>
+                  </td>
+                  <td className="px-8 py-5">
+                    <span className="text-sm font-bold text-slate-200">{product.stock || 0}</span>
                   </td>
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-2">
@@ -789,8 +793,9 @@ function LoginScreen({ onLoginSuccess, onGoToCatalog }: { onLoginSuccess: () => 
 
 function ProductModal({ product, categories, onClose, onRefresh }: { product?: Product, categories: Category[], onClose: () => void, onRefresh: () => void }) {
   const [formData, setFormData] = useState<Partial<Product>>(product || {
-    name: '', sku: '', category: categories[0]?.name || '', price: 0, status: 'In Stock', image: '', gender: 'Unisex', brand: ''
+    name: '', sku: '', category: categories[0]?.name || '', price: 0, stock: 0, status: 'In Stock', image: '', gender: 'Unisex', brand: ''
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: any) => {
@@ -798,14 +803,29 @@ function ProductModal({ product, categories, onClose, onRefresh }: { product?: P
     setLoading(true);
     const token = localStorage.getItem('admin_token');
 
+    const isUpdate = !!product;
+    const url = `/api/products.php${isUpdate ? `?id=${product.id}` : ''}`;
+
+    // We send data through FormData to support file uplads
+    const submitData = new FormData();
+    Object.keys(formData).forEach(key => {
+      submitData.append(key, formData[key as keyof Product] as any);
+    });
+
+    if (imageFile) {
+      submitData.append('image', imageFile);
+    }
+    if (isUpdate) {
+      submitData.append('_method', 'PUT');
+    }
+
     try {
-      const res = await fetch(`/api/products.php${product ? `?id=${product.id}` : ''}`, {
-        method: product ? 'PUT' : 'POST',
+      const res = await fetch(url, {
+        method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(formData)
+        body: submitData
       });
 
       if (res.ok) {
@@ -864,6 +884,10 @@ function ProductModal({ product, categories, onClose, onRefresh }: { product?: P
             <input required type="text" value={formData.brand} onChange={e => setFormData({ ...formData, brand: e.target.value })} className="bg-background-dark border border-neutral-border rounded-lg px-3 py-2 text-sm text-slate-100 focus:ring-1 focus:ring-primary" />
           </label>
           <label className="flex flex-col gap-1">
+            <span className="text-xs font-semibold text-slate-400">Stock</span>
+            <input required type="number" value={formData.stock || 0} onChange={e => setFormData({ ...formData, stock: Number(e.target.value) })} className="bg-background-dark border border-neutral-border rounded-lg px-3 py-2 text-sm text-slate-100 focus:ring-1 focus:ring-primary" />
+          </label>
+          <label className="col-span-2 flex flex-col gap-1">
             <span className="text-xs font-semibold text-slate-400">Status</span>
             <select required value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value as any })} className="bg-background-dark border border-neutral-border rounded-lg px-3 py-2 text-sm text-slate-100 focus:ring-1 focus:ring-primary">
               <option value="In Stock">In Stock</option>
@@ -872,8 +896,11 @@ function ProductModal({ product, categories, onClose, onRefresh }: { product?: P
             </select>
           </label>
           <label className="col-span-2 flex flex-col gap-1">
-            <span className="text-xs font-semibold text-slate-400">Image URL</span>
-            <input required type="url" value={formData.image} onChange={e => setFormData({ ...formData, image: e.target.value })} className="bg-background-dark border border-neutral-border rounded-lg px-3 py-2 text-sm text-slate-100 focus:ring-1 focus:ring-primary" placeholder="https://..." />
+            <span className="text-xs font-semibold text-slate-400">Image</span>
+            <input type="file" accept="image/*" onChange={e => setImageFile(e.target.files?.[0] || null)} className="bg-background-dark border border-neutral-border rounded-lg px-3 py-2 text-sm text-slate-100 focus:ring-1 focus:ring-primary" />
+            {product?.image && !imageFile && (
+              <span className="text-xs text-slate-500 mt-1">Current image: <a href={product.image} target="_blank" className="text-primary hover:underline">View Current Image</a></span>
+            )}
           </label>
 
           <div className="col-span-2 flex justify-end gap-3 mt-4 pt-4 border-t border-neutral-border">
