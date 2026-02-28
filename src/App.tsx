@@ -26,7 +26,8 @@ import {
   Share2,
   User,
   LayoutGrid,
-  X
+  X,
+  Check
 } from 'lucide-react';
 import { Product, Stat, Category } from './types';
 import { t, getBrowserLanguage } from './i18n';
@@ -79,7 +80,15 @@ function PublicCatalog({ onGoToAdmin, settings }: { onGoToAdmin: () => void, set
   const [products, setProducts] = useState<Product[]>([]);
   const [showLeadModal, setShowLeadModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [cart, setCart] = useState<Product[]>([]);
+  const [showCartModal, setShowCartModal] = useState(false);
   const lang = getBrowserLanguage();
+
+  const addToCart = (product: Product) => {
+    setCart(prev => prev.find(p => p.id === product.id) ? prev : [...prev, product]);
+  };
+  const removeFromCart = (id: string) => setCart(prev => prev.filter(p => p.id !== id));
+  const clearCart = () => setCart([]);
 
   useEffect(() => {
     fetch('/api/products.php')
@@ -118,9 +127,11 @@ function PublicCatalog({ onGoToAdmin, settings }: { onGoToAdmin: () => void, set
           <button className="glass-card p-2.5 rounded-full hover:bg-white/10 transition-colors">
             <Search className="size-5" />
           </button>
-          <button className="glass-card p-2.5 rounded-full hover:bg-white/10 transition-colors relative">
-            <ShoppingBag className="size-5" />
-            <span className="absolute top-0 right-0 w-2 h-2 bg-primary rounded-full"></span>
+          <button onClick={() => setShowCartModal(true)} className="glass-card p-2.5 rounded-full hover:bg-white/10 transition-colors relative">
+            <ShoppingCart className="size-5" />
+            {cart.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-background-dark text-[10px] font-black rounded-full flex items-center justify-center">{cart.length}</span>
+            )}
           </button>
           <button
             onClick={onGoToAdmin}
@@ -181,13 +192,17 @@ function PublicCatalog({ onGoToAdmin, settings }: { onGoToAdmin: () => void, set
                     <p className="text-slate-400 text-sm mb-3">{product.brand}</p>
                     <p className="text-primary font-bold text-2xl mb-5">RD$ {product.price.toLocaleString()}</p>
                     <button
-                      onClick={() => {
-                        setSelectedProduct(product);
-                        setShowLeadModal(true);
-                      }}
-                      className="w-full py-3.5 bg-primary text-background-dark font-black rounded-xl flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(242,185,13,0.4)] transition-all uppercase text-xs"
+                      onClick={() => addToCart(product)}
+                      className={`w-full py-3.5 font-black rounded-xl flex items-center justify-center gap-2 transition-all uppercase text-xs ${cart.find(p => p.id === product.id)
+                        ? 'bg-green-500/20 text-green-400 border border-green-500/40'
+                        : 'bg-primary text-background-dark hover:shadow-[0_0_20px_rgba(242,185,13,0.4)]'
+                        }`}
                     >
-                      <MessageSquare className="size-5" /> {t(lang, 'buy_whatsapp')}
+                      {cart.find(p => p.id === product.id) ? (
+                        <><Check className="size-4" /> Agregado</>
+                      ) : (
+                        <><ShoppingCart className="size-4" /> Agregar al carrito</>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -260,6 +275,16 @@ function PublicCatalog({ onGoToAdmin, settings }: { onGoToAdmin: () => void, set
             product={selectedProduct}
             settings={settings}
             onClose={() => setShowLeadModal(false)}
+            lang={lang}
+          />
+        )}
+        {showCartModal && (
+          <CartModal
+            cart={cart}
+            settings={settings}
+            onClose={() => setShowCartModal(false)}
+            onRemove={removeFromCart}
+            onClear={clearCart}
             lang={lang}
           />
         )}
@@ -1371,6 +1396,107 @@ function LeadCaptureModal({ product, settings, onClose, lang }: { product: Produ
             <MessageSquare className="size-5" /> {lang === 'es' ? 'Continuar al Chat' : 'Continue to Chat'}
           </button>
         </form>
+      </motion.div>
+    </div>
+  );
+}
+
+function CartModal({ cart, settings, onClose, onRemove, onClear, lang }: {
+  cart: Product[];
+  settings: AppSettings | null;
+  onClose: () => void;
+  onRemove: (id: string) => void;
+  onClear: () => void;
+  lang: 'en' | 'es';
+}) {
+  const total = cart.reduce((sum, p) => sum + p.price, 0);
+
+  const handleCheckout = () => {
+    if (cart.length === 0) return;
+    const whatsapp = (settings?.whatsapp_number || '').replace(/[^0-9]/g, '');
+    if (!whatsapp) { alert('WhatsApp number not configured.'); return; }
+
+    const items = cart.map(p => `• ${p.name} (${p.brand}) — RD$ ${p.price.toLocaleString()}`).join('\n');
+    const msg = lang === 'es'
+      ? `¡Hola! Estoy interesado/a en los siguientes perfumes:\n\n${items}\n\n*Total: RD$ ${total.toLocaleString()}*\n\n¿Me pueden confirmar disponibilidad y opciones de envío?`
+      : `Hello! I'm interested in the following perfumes:\n\n${items}\n\n*Total: RD$ ${total.toLocaleString()}*\n\nCan you confirm availability and shipping options?`;
+
+    window.open(`https://wa.me/${whatsapp}?text=${encodeURIComponent(msg)}`, '_blank');
+    onClear();
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-end sm:items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0, y: 60 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 60 }}
+        className="bg-neutral-dark border border-neutral-border rounded-2xl w-full max-w-md shadow-2xl overflow-hidden"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-neutral-border">
+          <div>
+            <h2 className="text-lg font-bold text-slate-100">{lang === 'es' ? 'Perfumes Seleccionados' : 'Selected Perfumes'}</h2>
+            <p className="text-xs text-slate-500 mt-0.5">{lang === 'es' ? 'Escríbenos y te los llevamos hoy mismo' : 'Message us and we\'ll deliver today'}</p>
+          </div>
+          <button onClick={onClose} className="text-slate-500 hover:text-slate-200 transition-colors p-1">
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Items */}
+        <div className="px-6 py-4 flex flex-col gap-3 max-h-64 overflow-y-auto">
+          {cart.length === 0 ? (
+            <p className="text-slate-500 text-sm text-center py-6">{lang === 'es' ? 'Tu carrito está vacío' : 'Your cart is empty'}</p>
+          ) : (
+            cart.map(product => (
+              <div key={product.id} className="flex items-center justify-between gap-3 py-2 border-b border-white/5 last:border-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-slate-200">{product.name}</p>
+                    <p className="text-xs text-slate-500">{product.brand}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <span className="text-primary font-bold text-sm">RD$ {product.price.toLocaleString()}</span>
+                  <button onClick={() => onRemove(product.id)} className="text-slate-600 hover:text-red-400 transition-colors">
+                    <X size={14} />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Benefits */}
+        <div className="px-6 py-4 bg-background-dark/50 text-xs text-slate-400 flex flex-col gap-2 border-t border-neutral-border">
+          <div className="flex items-center gap-2"><span>🚚</span> {lang === 'es' ? 'Envío gratis a domicilio' : 'Free home delivery'}</div>
+          <div className="flex items-center gap-2"><span>💵</span> {lang === 'es' ? 'Pago contra entrega' : 'Cash on delivery'}</div>
+          <div className="flex items-center gap-2"><span>✅</span> {lang === 'es' ? 'Garantía de devolución' : 'Money back guarantee'}</div>
+        </div>
+
+        {/* Total + Actions */}
+        <div className="px-6 py-5 border-t border-neutral-border flex flex-col gap-3">
+          {cart.length > 0 && (
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-slate-400 font-semibold">Total</span>
+              <span className="text-primary font-black text-lg">RD$ {total.toLocaleString()}</span>
+            </div>
+          )}
+          <button onClick={onClear} className="text-sm text-slate-500 hover:text-red-400 transition-colors underline text-center">
+            {lang === 'es' ? 'Vaciar selección' : 'Clear selection'}
+          </button>
+          <button
+            onClick={handleCheckout}
+            disabled={cart.length === 0}
+            className="w-full py-4 bg-[#25D366] hover:bg-[#25D366]/90 text-white font-black rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-[#25D366]/20 disabled:opacity-40 disabled:cursor-not-allowed text-sm uppercase tracking-widest"
+          >
+            <MessageSquare size={18} />
+            {lang === 'es' ? 'Continuar con el pedido 💬' : 'Continue to Order 💬'}
+          </button>
+        </div>
       </motion.div>
     </div>
   );
