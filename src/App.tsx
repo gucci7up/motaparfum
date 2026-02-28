@@ -108,52 +108,68 @@ function PublicCatalog({ onGoToAdmin, settings }: { onGoToAdmin: () => void, set
       className="mesh-gradient min-h-screen font-display"
     >
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-[60] px-4 md:px-8 py-4 flex items-center justify-between bg-background-dark/80 backdrop-blur-md border-b border-white/5">
-        <div className="flex items-center gap-3">
+      <nav className="fixed top-0 left-0 right-0 z-[60] px-4 md:px-8 py-3 flex items-center justify-between bg-background-dark/80 backdrop-blur-md border-b border-white/5 shadow-sm">
+        <div className="flex items-center gap-3 w-[200px]">
           {settings?.store_logo ? (
-            <img src={settings.store_logo} alt={settings?.store_name || 'Logo'} className="h-14 w-auto object-contain max-w-[180px]" />
+            <img src={settings.store_logo} alt={settings?.store_name || 'Logo'} className="h-12 md:h-14 w-auto object-contain max-w-[180px]" />
           ) : (
             <>
               <div className="p-2 bg-primary rounded-lg text-background-dark">
-                <Diamond className="size-6 font-bold" />
+                <Diamond className="size-5 md:size-6 font-bold" />
               </div>
-              <span className="text-lg md:text-xl font-bold tracking-tight uppercase">{settings?.store_name || 'PerfumeStore RD'}</span>
+              <span className="text-base md:text-xl font-bold tracking-tight uppercase truncate">{settings?.store_name || 'PerfumeStore RD'}</span>
             </>
           )}
         </div>
 
-        <div className="flex items-center gap-4">
-          <button className="glass-card p-2.5 rounded-full hover:bg-white/10 transition-colors">
-            <Search className="size-5" />
-          </button>
-          <button onClick={() => setShowCartModal(true)} className="glass-card p-2.5 rounded-full hover:bg-white/10 transition-colors relative">
-            <ShoppingCart className="size-5" />
-            {cart.length > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-background-dark text-[10px] font-black rounded-full flex items-center justify-center">{cart.length}</span>
-            )}
-          </button>
-          <button
-            onClick={onGoToAdmin}
-            className="glass-card p-2.5 rounded-full hover:bg-white/10 transition-colors"
-            title="Admin Panel"
-          >
-            <User className="size-5" />
-          </button>
-        </div>
-      </nav>
-
-      {/* Category Bar */}
-      <div className="fixed top-[72px] left-0 right-0 z-50 overflow-x-auto bg-background-dark/40 backdrop-blur-sm border-b border-white/5 py-3 no-scrollbar">
-        <div className="flex items-center justify-center gap-4 md:gap-8 px-4 min-w-max mx-auto">
+        {/* Desktop Categories */}
+        <div className="hidden md:flex items-center gap-1 glass-card p-1.5 rounded-full">
           {['Hombres', 'Mujeres', 'Unisex'].map((cat) => (
             <a
               key={cat}
-              className="flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 hover:border-primary/50 hover:text-primary transition-all text-sm font-semibold uppercase tracking-wider"
+              className="flex items-center gap-2 px-5 py-2 rounded-full hover:bg-white/10 hover:text-primary transition-all text-xs font-bold uppercase tracking-widest text-slate-300"
               href={`#${cat.toLowerCase()}`}
             >
               {cat === 'Hombres' && <User className="size-4" />}
               {cat === 'Mujeres' && <User className="size-4" />}
               {cat === 'Unisex' && <LayoutGrid className="size-4" />}
+              {t(lang, cat === 'Hombres' ? 'cat_men' : cat === 'Mujeres' ? 'cat_women' : 'cat_unisex')}
+            </a>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-3 md:gap-4 w-auto md:w-[200px] justify-end">
+          <button className="glass-card p-2 md:p-2.5 rounded-full hover:bg-white/10 transition-colors">
+            <Search className="size-4 md:size-5" />
+          </button>
+          <button onClick={() => setShowCartModal(true)} className="glass-card p-2 md:p-2.5 rounded-full hover:bg-white/10 transition-colors relative">
+            <ShoppingCart className="size-4 md:size-5" />
+            {cart.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-primary text-background-dark text-[10px] font-black rounded-full flex items-center justify-center">{cart.length}</span>
+            )}
+          </button>
+          <button
+            onClick={onGoToAdmin}
+            className="glass-card p-2 md:p-2.5 rounded-full hover:bg-white/10 transition-colors"
+            title="Admin Panel"
+          >
+            <User className="size-4 md:size-5" />
+          </button>
+        </div>
+      </nav>
+
+      {/* Category Bar (Mobile Only) */}
+      <div className="md:hidden fixed top-[60px] left-0 right-0 z-50 overflow-x-auto bg-background-dark/90 backdrop-blur-md border-b border-white/5 py-3 no-scrollbar">
+        <div className="flex items-center justify-center gap-3 px-4 min-w-max mx-auto">
+          {['Hombres', 'Mujeres', 'Unisex'].map((cat) => (
+            <a
+              key={cat}
+              className="flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 hover:border-primary/50 hover:text-primary transition-all text-xs font-semibold uppercase tracking-wider"
+              href={`#${cat.toLowerCase()}`}
+            >
+              {cat === 'Hombres' && <User className="size-3.5" />}
+              {cat === 'Mujeres' && <User className="size-3.5" />}
+              {cat === 'Unisex' && <LayoutGrid className="size-3.5" />}
               {t(lang, cat === 'Hombres' ? 'cat_men' : cat === 'Mujeres' ? 'cat_women' : 'cat_unisex')}
             </a>
           ))}
