@@ -214,6 +214,7 @@ function PublicCatalog({ onGoToAdmin }: { onGoToAdmin: () => void }) {
 }
 
 function DashboardScreen({ onGoToCatalog, onLogout }: { onGoToCatalog: () => void, onLogout: () => void }) {
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'products' | 'orders' | 'leads' | 'settings'>('dashboard');
   const [products, setProducts] = useState<Product[]>([]);
   const [stats, setStats] = useState<Stat[]>([]);
 
@@ -275,13 +276,13 @@ function DashboardScreen({ onGoToCatalog, onLogout }: { onGoToCatalog: () => voi
           </div>
 
           <nav className="flex flex-col gap-2 flex-1">
-            <SidebarLink icon={<LayoutDashboard size={20} />} label="Dashboard" />
-            <SidebarLink icon={<Package size={20} />} label="Products" active />
-            <SidebarLink icon={<ShoppingCart size={20} />} label="Orders" />
-            <SidebarLink icon={<MessageSquare size={20} />} label="WhatsApp Leads" />
+            <SidebarLink icon={<LayoutDashboard size={20} />} label="Overview" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
+            <SidebarLink icon={<Package size={20} />} label="Products" active={activeTab === 'products'} onClick={() => setActiveTab('products')} />
+            <SidebarLink icon={<ShoppingCart size={20} />} label="Orders" active={activeTab === 'orders'} onClick={() => setActiveTab('orders')} />
+            <SidebarLink icon={<MessageSquare size={20} />} label="WhatsApp Leads" active={activeTab === 'leads'} onClick={() => setActiveTab('leads')} />
 
             <div className="mt-auto flex flex-col gap-2">
-              <SidebarLink icon={<Settings size={20} />} label="Settings" />
+              <SidebarLink icon={<Settings size={20} />} label="Settings" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
               <button
                 onClick={onGoToCatalog}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-primary/10 hover:text-primary transition-colors"
@@ -307,12 +308,12 @@ function DashboardScreen({ onGoToCatalog, onLogout }: { onGoToCatalog: () => voi
       <main className="flex-1 flex flex-col overflow-y-auto">
         <header className="h-20 flex items-center justify-between px-10 border-b border-neutral-border bg-background-dark/50 backdrop-blur-md sticky top-0 z-10">
           <div className="flex items-center gap-12">
-            <h2 className="text-xl font-bold text-slate-100">Inventory Management</h2>
+            <h2 className="text-xl font-bold text-slate-100 uppercase tracking-widest">{activeTab}</h2>
             <div className="relative w-72">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 size-5" />
               <input
                 type="text"
-                placeholder="Search perfume catalog..."
+                placeholder="Search catalog..."
                 className="w-full bg-neutral-dark border-none rounded-lg pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none text-slate-100"
               />
             </div>
@@ -321,7 +322,7 @@ function DashboardScreen({ onGoToCatalog, onLogout }: { onGoToCatalog: () => voi
           <div className="flex items-center gap-4">
             <button className="bg-primary hover:bg-primary/90 text-background-dark px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-transform active:scale-95 shadow-lg shadow-primary/10">
               <PlusCircle size={18} />
-              Add New Product
+              Add New
             </button>
             <div className="h-10 w-px bg-neutral-border mx-2"></div>
             <button className="p-2 text-slate-400 hover:text-primary transition-colors">
@@ -341,131 +342,248 @@ function DashboardScreen({ onGoToCatalog, onLogout }: { onGoToCatalog: () => voi
         </header>
 
         <div className="p-10 flex flex-col gap-10">
-          {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {stats.map((stat, idx) => (
-              <StatCard key={idx} stat={stat} />
-            ))}
-          </div>
-
-          {/* Table */}
-          <div className="bg-neutral-dark rounded-xl border border-neutral-border overflow-hidden">
-            <div className="px-8 py-6 border-b border-neutral-border flex justify-between items-center bg-neutral-dark/50">
-              <h3 className="text-lg font-bold text-slate-100">Current Catalog</h3>
-              <div className="flex gap-2">
-                <button className="flex items-center gap-2 px-4 py-2 text-xs font-bold bg-background-dark border border-neutral-border rounded-lg text-slate-400 hover:text-primary transition-colors">
-                  <Filter size={16} />
-                  Filter
-                </button>
-                <button className="flex items-center gap-2 px-4 py-2 text-xs font-bold bg-background-dark border border-neutral-border rounded-lg text-slate-400 hover:text-primary transition-colors">
-                  <Download size={16} />
-                  Export
-                </button>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="bg-background-dark text-slate-400 uppercase text-[10px] font-bold tracking-widest">
-                  <tr>
-                    <th className="px-8 py-4 w-20">Image</th>
-                    <th className="px-8 py-4">Product Name</th>
-                    <th className="px-8 py-4">Category</th>
-                    <th className="px-8 py-4">Price (DOP)</th>
-                    <th className="px-8 py-4">Status</th>
-                    <th className="px-8 py-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-border">
-                  {products.map((product) => (
-                    <tr key={product.id} className="hover:bg-primary/5 transition-colors group">
-                      <td className="px-8 py-5">
-                        <div
-                          className="w-14 h-14 rounded-lg bg-neutral-border bg-center bg-no-repeat bg-cover border border-primary/10 overflow-hidden"
-                          style={{ backgroundImage: `url(${product.image})` }}
-                        />
-                      </td>
-                      <td className="px-8 py-5">
-                        <div className="flex flex-col">
-                          <span className="text-sm font-bold text-slate-100">{product.name}</span>
-                          <span className="text-xs text-slate-400">SKU: {product.sku}</span>
-                        </div>
-                      </td>
-                      <td className="px-8 py-5">
-                        <span className="px-3 py-1 text-[10px] font-bold rounded-full bg-primary/20 text-primary uppercase tracking-tight">
-                          {product.category}
-                        </span>
-                      </td>
-                      <td className="px-8 py-5">
-                        <span className="text-sm font-bold text-slate-100">${product.price.toLocaleString()}</span>
-                      </td>
-                      <td className="px-8 py-5">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${product.status === 'In Stock' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                          <span className="text-xs font-medium text-slate-400">{product.status}</span>
-                        </div>
-                      </td>
-                      <td className="px-8 py-5 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button className="p-2 text-slate-400 hover:text-primary transition-colors">
-                            <Edit2 size={18} />
-                          </button>
-                          <button onClick={() => handleDelete(product.id)} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination */}
-            <div className="px-8 py-5 flex items-center justify-between bg-background-dark border-t border-neutral-border">
-              <span className="text-xs text-slate-500">Showing 1 to 4 of 1,240 results</span>
-              <div className="flex gap-1">
-                <button className="w-8 h-8 rounded flex items-center justify-center text-slate-400 hover:bg-neutral-border transition-colors">
-                  <ChevronLeft size={16} />
-                </button>
-                <button className="w-8 h-8 rounded flex items-center justify-center text-background-dark bg-primary text-xs font-bold">1</button>
-                <button className="w-8 h-8 rounded flex items-center justify-center text-slate-400 text-xs font-bold hover:bg-neutral-border transition-colors">2</button>
-                <button className="w-8 h-8 rounded flex items-center justify-center text-slate-400 text-xs font-bold hover:bg-neutral-border transition-colors">3</button>
-                <span className="px-2 flex items-center text-slate-600">...</span>
-                <button className="w-8 h-8 rounded flex items-center justify-center text-slate-400 text-xs font-bold hover:bg-neutral-border transition-colors">310</button>
-                <button className="w-8 h-8 rounded flex items-center justify-center text-slate-400 hover:bg-neutral-border transition-colors">
-                  <ChevronRight size={16} />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <footer className="flex items-center justify-between text-[10px] text-slate-500 uppercase tracking-widest font-bold border-t border-neutral-border pt-6 pb-10">
-            <div>Last update: 5 minutes ago</div>
-            <div className="flex gap-4">
-              <a href="#" className="hover:text-primary transition-colors">System Status</a>
-              <a href="#" className="hover:text-primary transition-colors">Support Center</a>
-              <a href="#" className="hover:text-primary transition-colors">API Documentation</a>
-            </div>
-          </footer>
+          {activeTab === 'dashboard' && <OverviewTab stats={stats} />}
+          {activeTab === 'products' && <ProductsTab products={products} onDelete={handleDelete} />}
+          {activeTab === 'orders' && <OrdersTab />}
+          {activeTab === 'leads' && <LeadsTab />}
+          {activeTab === 'settings' && <SettingsTab />}
         </div>
+
+        <footer className="flex items-center justify-between text-[10px] text-slate-500 uppercase tracking-widest font-bold border-t border-neutral-border pt-6 pb-10">
+          <div>Last update: 5 minutes ago</div>
+          <div className="flex gap-4">
+            <a href="#" className="hover:text-primary transition-colors">System Status</a>
+            <a href="#" className="hover:text-primary transition-colors">Support Center</a>
+            <a href="#" className="hover:text-primary transition-colors">API Documentation</a>
+          </div>
+        </footer>
       </main>
     </motion.div>
   );
 }
 
-function SidebarLink({ icon, label, active = false }: { icon: any, label: string, active?: boolean }) {
+function OverviewTab({ stats }: { stats: Stat[] }) {
   return (
-    <a
-      href="#"
-      className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${active
-        ? 'bg-primary/20 text-primary border border-primary/20'
-        : 'text-slate-400 hover:bg-primary/10 hover:text-primary'
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {stats.map((stat, idx) => (
+        <StatCard key={idx} stat={stat} />
+      ))}
+    </div>
+  );
+}
+
+function ProductsTab({ products, onDelete }: { products: Product[], onDelete: (id: string) => void }) {
+  return (
+    <div className="bg-neutral-dark rounded-xl border border-neutral-border overflow-hidden shadow-xl">
+      <div className="px-8 py-6 border-b border-neutral-border flex justify-between items-center bg-neutral-dark/50">
+        <h3 className="text-lg font-bold text-slate-100">Current Catalog</h3>
+        <div className="flex gap-2">
+          <button className="flex items-center gap-2 px-4 py-2 text-xs font-bold bg-background-dark border border-neutral-border rounded-lg text-slate-400 hover:text-primary transition-colors">
+            <Filter size={16} />
+            Filter
+          </button>
+          <button className="flex items-center gap-2 px-4 py-2 text-xs font-bold bg-background-dark border border-neutral-border rounded-lg text-slate-400 hover:text-primary transition-colors">
+            <Download size={16} />
+            Export
+          </button>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-left">
+          <thead className="bg-background-dark text-slate-400 uppercase text-[10px] font-bold tracking-widest">
+            <tr>
+              <th className="px-8 py-4 w-20">Image</th>
+              <th className="px-8 py-4">Product Name</th>
+              <th className="px-8 py-4">Category</th>
+              <th className="px-8 py-4">Price (DOP)</th>
+              <th className="px-8 py-4">Status</th>
+              <th className="px-8 py-4 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-neutral-border">
+            {products.map((product) => (
+              <tr key={product.id} className="hover:bg-primary/5 transition-colors group">
+                <td className="px-8 py-5">
+                  <div
+                    className="w-14 h-14 rounded-lg bg-neutral-border bg-center bg-no-repeat bg-cover border border-primary/10 overflow-hidden"
+                    style={{ backgroundImage: `url(${product.image})` }}
+                  />
+                </td>
+                <td className="px-8 py-5">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-slate-100">{product.name}</span>
+                    <span className="text-xs text-slate-400">SKU: {product.sku}</span>
+                  </div>
+                </td>
+                <td className="px-8 py-5">
+                  <span className="px-3 py-1 text-[10px] font-bold rounded-full bg-primary/20 text-primary uppercase tracking-tight">
+                    {product.category}
+                  </span>
+                </td>
+                <td className="px-8 py-5">
+                  <span className="text-sm font-bold text-slate-100">${product.price.toLocaleString()}</span>
+                </td>
+                <td className="px-8 py-5">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${product.status === 'In Stock' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                    <span className="text-xs font-medium text-slate-400">{product.status}</span>
+                  </div>
+                </td>
+                <td className="px-8 py-5 text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    <button className="p-2 text-slate-400 hover:text-primary transition-colors">
+                      <Edit2 size={18} />
+                    </button>
+                    <button onClick={() => onDelete(product.id)} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="px-8 py-5 flex items-center justify-between bg-background-dark border-t border-neutral-border">
+        <span className="text-xs text-slate-500">Showing {products.length} results</span>
+        <div className="flex gap-1">
+          <button className="w-8 h-8 rounded flex items-center justify-center text-slate-400 hover:bg-neutral-border transition-colors">
+            <ChevronLeft size={16} />
+          </button>
+          <button className="w-8 h-8 rounded flex items-center justify-center text-background-dark bg-primary text-xs font-bold">1</button>
+          <button className="w-8 h-8 rounded flex items-center justify-center text-slate-400 hover:bg-neutral-border transition-colors">
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OrdersTab() {
+  const mockOrders = [
+    { id: 'ORD-001', customer: 'Carlos Perez', date: 'Oct 24, 2023', total: 14500, status: 'Delivered' },
+    { id: 'ORD-002', customer: 'Maria Leon', date: 'Oct 25, 2023', total: 8900, status: 'Processing' },
+    { id: 'ORD-003', customer: 'Jose Martinez', date: 'Oct 26, 2023', total: 12000, status: 'Pending' },
+  ];
+  return (
+    <div className="bg-neutral-dark rounded-xl border border-neutral-border overflow-hidden shadow-xl">
+      <div className="px-8 py-6 border-b border-neutral-border flex justify-between items-center bg-neutral-dark/50">
+        <h3 className="text-lg font-bold text-slate-100">Recent Orders</h3>
+        <button className="flex items-center gap-2 px-4 py-2 text-xs font-bold bg-background-dark border border-neutral-border rounded-lg text-slate-400 hover:text-primary transition-colors">
+          <Filter size={16} />
+          Filter
+        </button>
+      </div>
+      <table className="w-full text-left">
+        <thead className="bg-background-dark text-slate-400 uppercase text-[10px] font-bold tracking-widest">
+          <tr>
+            <th className="px-8 py-4">Order ID</th>
+            <th className="px-8 py-4">Customer</th>
+            <th className="px-8 py-4">Date</th>
+            <th className="px-8 py-4">Status</th>
+            <th className="px-8 py-4 text-right">Total (DOP)</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-neutral-border">
+          {mockOrders.map(o => (
+            <tr key={o.id} className="hover:bg-primary/5 transition-colors">
+              <td className="px-8 py-5 font-bold text-slate-300">{o.id}</td>
+              <td className="px-8 py-5">{o.customer}</td>
+              <td className="px-8 py-5 text-slate-400 text-sm">{o.date}</td>
+              <td className="px-8 py-5">
+                <span className={`px-3 py-1 text-[10px] font-bold rounded-full uppercase tracking-tight ${o.status === 'Delivered' ? 'bg-emerald-500/20 text-emerald-500' : o.status === 'Processing' ? 'bg-primary/20 text-primary' : 'bg-slate-500/20 text-slate-400'}`}>{o.status}</span>
+              </td>
+              <td className="px-8 py-5 text-right font-bold text-slate-100">${o.total.toLocaleString()}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function LeadsTab() {
+  const mockLeads = [
+    { id: '1', name: 'Laura Sanchez', number: '+1 809-555-0100', status: 'Hot', product: 'Creed Aventus', time: '10 mins ago' },
+    { id: '2', name: 'Miguel Angel', number: '+1 829-555-0101', status: 'Follow Up', product: 'Tom Ford Oud Wood', time: '2 hours ago' },
+  ];
+  return (
+    <div className="bg-neutral-dark rounded-xl border border-neutral-border overflow-hidden shadow-xl">
+      <div className="px-8 py-6 border-b border-neutral-border bg-neutral-dark/50">
+        <h3 className="text-lg font-bold text-slate-100 leading-tight">WhatsApp Leads</h3>
+        <p className="text-sm text-slate-400">Track and respond to potential customers</p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-8 bg-background-dark/30">
+        {mockLeads.map((lead) => (
+          <div key={lead.id} className="glass-card p-6 rounded-2xl border border-white/5 relative group hover:border-primary/30 transition-colors">
+            <div className="flex justify-between items-start mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#25D366]/20 text-[#25D366] flex items-center justify-center">
+                  <MessageSquare size={20} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-200">{lead.name}</h4>
+                  <p className="text-xs text-slate-400">{lead.time}</p>
+                </div>
+              </div>
+              <span className={`px-2 py-1 text-[10px] font-bold rounded uppercase tracking-wide ${lead.status === 'Hot' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}`}>{lead.status}</span>
+            </div>
+            <div className="mb-4">
+              <p className="text-sm text-slate-300"><span className="text-slate-500">Number:</span> {lead.number}</p>
+              <p className="text-sm text-slate-300 mt-1"><span className="text-slate-500">Interested in:</span> <span className="text-primary font-medium">{lead.product}</span></p>
+            </div>
+            <button className="w-full py-2 bg-[#25D366] text-background-dark font-bold rounded-lg text-sm hover:bg-[#25D366]/90 transition-colors uppercase tracking-widest mt-2 flex justify-center items-center gap-2">
+              <MessageSquare size={16} /> Reply on WhatsApp
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SettingsTab() {
+  return (
+    <div className="glass-card rounded-2xl border border-neutral-border overflow-hidden max-w-2xl mx-auto w-full shadow-2xl">
+      <div className="px-8 py-6 border-b border-neutral-border bg-neutral-dark/50">
+        <h3 className="text-lg font-bold text-slate-100 uppercase tracking-widest">Store Configurations</h3>
+      </div>
+      <div className="p-8 flex flex-col gap-6">
+        <label className="flex flex-col gap-2">
+          <span className="text-sm font-semibold text-slate-400">Store Name</span>
+          <input type="text" defaultValue="Luxury Perfume RD" className="w-full bg-background-dark border border-neutral-border rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none text-slate-100 transition-shadow" />
+        </label>
+        <label className="flex flex-col gap-2">
+          <span className="text-sm font-semibold text-slate-400">Support Email</span>
+          <input type="email" defaultValue="support@motaparfum.store" className="w-full bg-background-dark border border-neutral-border rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none text-slate-100 transition-shadow" />
+        </label>
+        <label className="flex flex-col gap-2">
+          <span className="text-sm font-semibold text-slate-400">WhatsApp Number</span>
+          <input type="tel" defaultValue="+1 809 555 0199" className="w-full bg-background-dark border border-neutral-border rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none text-slate-100 transition-shadow" />
+        </label>
+        <button className="mt-4 bg-primary hover:bg-primary/90 text-background-dark py-3.5 rounded-lg text-sm font-bold w-full transition-transform active:scale-95 shadow-lg shadow-primary/20 uppercase tracking-widest">
+          Save Changes
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SidebarLink({ icon, label, active = false, onClick }: { icon: any, label: string, active?: boolean, onClick?: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${active
+        ? 'bg-primary text-background-dark shadow-[0_4px_20px_-4px_rgba(242,185,13,0.4)] font-bold'
+        : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
         }`}
     >
-      {icon}
-      <span className="text-sm font-semibold tracking-wide">{label}</span>
-    </a>
+      <div className={`${active ? 'text-background-dark' : 'text-slate-400'}`}>{icon}</div>
+      <span className="text-sm tracking-wide">{label}</span>
+      {active && <div className="ml-auto w-1 h-1 rounded-full bg-background-dark"></div>}
+    </button>
   );
 }
 
@@ -508,7 +626,7 @@ function LoginScreen({ onLoginSuccess, onGoToCatalog }: { onLoginSuccess: () => 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: any) => {
     e.preventDefault();
     setLoading(true);
     setError('');
