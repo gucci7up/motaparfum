@@ -735,9 +735,27 @@ function SettingsTab({ onRefresh, settings }: { onRefresh: () => void, settings:
     const file = e.target.files?.[0];
     if (!file) return;
     setLogoFile(file);
-    const reader = new FileReader();
-    reader.onload = (ev) => setLogoPreview(ev.target?.result as string);
-    reader.readAsDataURL(file);
+
+    // Resize image via canvas to keep base64 small enough for DB storage (~200x80 max)
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      const MAX_W = 400;
+      const MAX_H = 160;
+      let w = img.width;
+      let h = img.height;
+      if (w > MAX_W) { h = Math.round(h * MAX_W / w); w = MAX_W; }
+      if (h > MAX_H) { w = Math.round(w * MAX_H / h); h = MAX_H; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx?.drawImage(img, 0, 0, w, h);
+      const compressed = canvas.toDataURL('image/png', 0.8);
+      setLogoPreview(compressed);
+      URL.revokeObjectURL(objectUrl);
+    };
+    img.src = objectUrl;
   };
 
   const handleSave = async () => {
@@ -751,27 +769,29 @@ function SettingsTab({ onRefresh, settings }: { onRefresh: () => void, settings:
       return;
     }
 
-    // Use FormData to support file uploads
-    const data = new FormData();
-    data.append('store_name', formData.store_name);
-    data.append('support_email', formData.support_email);
-    data.append('whatsapp_number', formData.whatsapp_number);
-    data.append('primary_color', formData.primary_color);
-    if (formData.store_logo && !logoFile) {
-      // URL-based logo (typed in the URL field)
-      data.append('store_logo', formData.store_logo);
-    }
-    if (logoFile) {
-      data.append('store_logo_file', logoFile);
+    // Send as JSON - includes base64 logo when selected
+    const payload: any = {
+      store_name: formData.store_name,
+      support_email: formData.support_email,
+      whatsapp_number: formData.whatsapp_number,
+      primary_color: formData.primary_color,
+    };
+    // Use the compressed canvas preview if a new file was selected,
+    // or the URL if typed, or the existing setting if unchanged
+    if (logoPreview) {
+      payload.store_logo = logoPreview;
+    } else if (formData.store_logo) {
+      payload.store_logo = formData.store_logo;
     }
 
     try {
       const res = await fetch('/api/settings.php', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         },
-        body: data
+        body: JSON.stringify(payload)
       });
 
       // Read body as text first so we don't crash on non-JSON responses
