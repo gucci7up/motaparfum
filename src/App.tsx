@@ -202,9 +202,9 @@ function PublicCatalog({ onGoToAdmin, settings }: { onGoToAdmin: () => void, set
                         }`}
                     >
                       {cart.find(p => p.id === product.id) ? (
-                        <><Check className="size-4" /> Agregado</>
+                        <><Check className="size-4" /> {t(lang, 'added_to_cart')}</>
                       ) : (
-                        <><ShoppingCart className="size-4" /> Agregar al carrito</>
+                        <><ShoppingCart className="size-4" /> {t(lang, 'add_to_cart')}</>
                       )}
                     </button>
                   </div>
