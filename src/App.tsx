@@ -515,7 +515,7 @@ function ProductsTab({ products, categories, onDelete, onRefresh }: { products: 
                   <td className="px-8 py-5">
                     <div className="w-14 h-14 rounded-lg bg-neutral-border border border-primary/10 overflow-hidden flex-shrink-0">
                       {product.image ? (
-                        <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                        <img src={product.image} alt={product.name} className="w-full h-full object-contain p-1" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-slate-600">
                           <Package size={20} />
