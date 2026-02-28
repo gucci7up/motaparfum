@@ -188,12 +188,12 @@ function PublicCatalog({ onGoToAdmin, settings }: { onGoToAdmin: () => void, set
               <h2 className="text-3xl md:text-4xl font-bold uppercase tracking-widest">{t(lang, gender === 'Hombres' ? 'cat_men' : gender === 'Mujeres' ? 'cat_women' : 'cat_unisex')}</h2>
               <div className="h-px flex-1 bg-gradient-to-r from-white/20 to-transparent"></div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-24 gap-x-12 mb-20">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-y-16 gap-x-4 md:gap-x-12 mb-20">
               {products.filter(p => p.gender === gender).map((product) => (
                 <div key={product.id} className="relative group">
                   <div className="relative aspect-[4/5] flex flex-col items-center justify-center">
-                    <div className="absolute bottom-12 w-48 h-12 bg-neutral-dark border-t border-primary/30 rounded-[50%] pedestal-shadow transform transition-transform group-hover:scale-110"></div>
-                    <div className="relative z-10 w-52 h-64 transition-all duration-700 group-hover:-translate-y-8 group-hover:rotate-2">
+                    <div className="absolute bottom-6 md:bottom-12 w-24 md:w-48 h-8 md:h-12 bg-neutral-dark border-t border-primary/30 rounded-[50%] pedestal-shadow transform transition-transform group-hover:scale-110"></div>
+                    <div className="relative z-10 w-28 h-40 md:w-52 md:h-64 transition-all duration-700 group-hover:-translate-y-4 md:group-hover:-translate-y-8 group-hover:rotate-2">
                       <img
                         src={product.image}
                         alt={product.name}
@@ -202,23 +202,27 @@ function PublicCatalog({ onGoToAdmin, settings }: { onGoToAdmin: () => void, set
                       />
                     </div>
                   </div>
-                  <div className="glass-card mt-[-60px] p-6 rounded-2xl relative z-20 text-center mx-4">
-                    <h3 className="text-xl font-bold mb-1">{product.name}</h3>
-                    <p className="text-slate-400 text-sm mb-3">{product.brand}</p>
-                    <p className="text-primary font-bold text-2xl mb-5">RD$ {product.price.toLocaleString()}</p>
-                    <button
-                      onClick={() => addToCart(product)}
-                      className={`w-full py-3.5 font-black rounded-xl flex items-center justify-center gap-2 transition-all uppercase text-xs ${cart.find(p => p.id === product.id)
-                        ? 'bg-green-500/20 text-green-400 border border-green-500/40'
-                        : 'bg-primary text-background-dark hover:shadow-[0_0_20px_rgba(242,185,13,0.4)]'
-                        }`}
-                    >
-                      {cart.find(p => p.id === product.id) ? (
-                        <><Check className="size-4" /> {t(lang, 'added_to_cart')}</>
-                      ) : (
-                        <><ShoppingCart className="size-4" /> {t(lang, 'add_to_cart')}</>
-                      )}
-                    </button>
+                  <div className="glass-card mt-[-30px] md:mt-[-60px] p-3 md:p-6 rounded-xl md:rounded-2xl relative z-20 text-center mx-1 md:mx-4 flex flex-col h-full justify-between">
+                    <div>
+                      <h3 className="text-sm md:text-xl font-bold mb-1 line-clamp-2 md:line-clamp-none leading-tight">{product.name}</h3>
+                      <p className="text-slate-400 text-[10px] md:text-sm mb-2">{product.brand}</p>
+                    </div>
+                    <div>
+                      <p className="text-primary font-bold text-base md:text-2xl mb-3 md:mb-5">RD$ {product.price.toLocaleString()}</p>
+                      <button
+                        onClick={() => addToCart(product)}
+                        className={`w-full py-3.5 font-black rounded-xl flex items-center justify-center gap-2 transition-all uppercase text-xs ${cart.find(p => p.id === product.id)
+                          ? 'bg-green-500/20 text-green-400 border border-green-500/40'
+                          : 'bg-primary text-background-dark hover:shadow-[0_0_20px_rgba(242,185,13,0.4)]'
+                          }`}
+                      >
+                        {cart.find(p => p.id === product.id) ? (
+                          <><Check className="size-4" /> {t(lang, 'added_to_cart')}</>
+                        ) : (
+                          <><ShoppingCart className="size-4" /> {t(lang, 'add_to_cart')}</>
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -297,7 +301,7 @@ function PublicCatalog({ onGoToAdmin, settings }: { onGoToAdmin: () => void, set
           />
         )}
       </AnimatePresence>
-    </motion.div>
+    </motion.div >
   );
 }
 
