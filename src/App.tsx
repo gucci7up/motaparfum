@@ -121,11 +121,7 @@ function PublicCatalog({ onGoToAdmin, settings }: { onGoToAdmin: () => void, set
             </>
           )}
         </div>
-        <div className="hidden md:flex items-center gap-8 glass-card px-8 py-2.5 rounded-full">
-          <a className="text-sm font-medium hover:text-primary transition-colors" href="#">{t(lang, 'nav_home')}</a>
-          <a className="text-sm font-medium hover:text-primary transition-colors" href="#">{t(lang, 'nav_new')}</a>
-          <a className="text-sm font-medium hover:text-primary transition-colors" href="#">{t(lang, 'nav_offers')}</a>
-        </div>
+
         <div className="flex items-center gap-4">
           <button className="glass-card p-2.5 rounded-full hover:bg-white/10 transition-colors">
             <Search className="size-5" />
