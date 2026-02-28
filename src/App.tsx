@@ -202,27 +202,23 @@ function PublicCatalog({ onGoToAdmin, settings }: { onGoToAdmin: () => void, set
                       />
                     </div>
                   </div>
-                  <div className="glass-card mt-[-20px] md:mt-[-60px] p-4 md:p-6 rounded-xl md:rounded-2xl relative z-20 text-center mx-1 md:mx-4 flex flex-col h-full justify-between">
-                    <div>
-                      <h3 className="text-sm md:text-xl font-bold mb-1 leading-tight">{product.name}</h3>
-                      <p className="text-slate-400 text-xs md:text-sm mb-3">{product.brand}</p>
-                    </div>
-                    <div>
-                      <p className="text-primary font-bold text-lg md:text-2xl mb-4 md:mb-5">RD$ {product.price.toLocaleString()}</p>
-                      <button
-                        onClick={() => addToCart(product)}
-                        className={`w-full py-3.5 font-black rounded-xl flex items-center justify-center gap-2 transition-all uppercase text-xs ${cart.find(p => p.id === product.id)
-                          ? 'bg-green-500/20 text-green-400 border border-green-500/40'
-                          : 'bg-primary text-background-dark hover:shadow-[0_0_20px_rgba(242,185,13,0.4)]'
-                          }`}
-                      >
-                        {cart.find(p => p.id === product.id) ? (
-                          <><Check className="size-4" /> {t(lang, 'added_to_cart')}</>
-                        ) : (
-                          <><ShoppingCart className="size-4" /> {t(lang, 'add_to_cart')}</>
-                        )}
-                      </button>
-                    </div>
+                  <div className="glass-card mt-[-20px] md:mt-[-50px] p-4 md:p-6 rounded-xl md:rounded-2xl relative z-20 text-center mx-1 md:mx-4">
+                    <h3 className="text-sm md:text-xl font-bold mb-1 leading-tight">{product.name}</h3>
+                    <p className="text-slate-400 text-xs md:text-sm mb-3 md:mb-4">{product.brand}</p>
+                    <p className="text-primary font-bold text-lg md:text-2xl mb-4 md:mb-5">RD$ {product.price.toLocaleString()}</p>
+                    <button
+                      onClick={() => addToCart(product)}
+                      className={`w-full py-3.5 font-black rounded-xl flex items-center justify-center gap-2 transition-all uppercase text-xs ${cart.find(p => p.id === product.id)
+                        ? 'bg-green-500/20 text-green-400 border border-green-500/40'
+                        : 'bg-primary text-background-dark hover:shadow-[0_0_20px_rgba(242,185,13,0.4)]'
+                        }`}
+                    >
+                      {cart.find(p => p.id === product.id) ? (
+                        <><Check className="size-4" /> {t(lang, 'added_to_cart')}</>
+                      ) : (
+                        <><ShoppingCart className="size-4" /> {t(lang, 'add_to_cart')}</>
+                      )}
+                    </button>
                   </div>
                 </div>
               ))}
