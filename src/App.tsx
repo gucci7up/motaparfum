@@ -25,9 +25,10 @@ import {
   MapPin,
   Share2,
   User,
-  LayoutGrid
+  LayoutGrid,
+  X
 } from 'lucide-react';
-import { Product, Stat } from './types';
+import { Product, Stat, Category } from './types';
 
 export default function App() {
   const [view, setView] = useState<'catalog' | 'login' | 'admin'>('catalog');
@@ -36,13 +37,13 @@ export default function App() {
     <div className="min-h-screen bg-background-dark text-slate-100 selection:bg-primary/30">
       <AnimatePresence mode="wait">
         {view === 'catalog' && (
-          <PublicCatalog key="catalog" onGoToAdmin={() => setView('login')} />
+          <PublicCatalog onGoToAdmin={() => setView('login')} />
         )}
         {view === 'login' && (
-          <LoginScreen key="login" onLoginSuccess={() => setView('admin')} onGoToCatalog={() => setView('catalog')} />
+          <LoginScreen onLoginSuccess={() => setView('admin')} onGoToCatalog={() => setView('catalog')} />
         )}
         {view === 'admin' && (
-          <DashboardScreen key="admin" onGoToCatalog={() => setView('catalog')} onLogout={() => {
+          <DashboardScreen onGoToCatalog={() => setView('catalog')} onLogout={() => {
             localStorage.removeItem('admin_token');
             setView('login');
           }} />
@@ -217,6 +218,7 @@ function DashboardScreen({ onGoToCatalog, onLogout }: { onGoToCatalog: () => voi
   const [activeTab, setActiveTab] = useState<'dashboard' | 'products' | 'orders' | 'leads' | 'settings'>('dashboard');
   const [products, setProducts] = useState<Product[]>([]);
   const [stats, setStats] = useState<Stat[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   const fetchData = () => {
     fetch('/api/products.php')
@@ -228,6 +230,11 @@ function DashboardScreen({ onGoToCatalog, onLogout }: { onGoToCatalog: () => voi
       .then(res => res.json())
       .then(data => setStats(data))
       .catch(err => console.error('Error fetching stats:', err));
+
+    fetch('/api/categories.php')
+      .then(res => res.json())
+      .then(data => setCategories(data))
+      .catch(err => console.error('Error fetching categories:', err));
   };
 
   useEffect(() => {
@@ -343,7 +350,7 @@ function DashboardScreen({ onGoToCatalog, onLogout }: { onGoToCatalog: () => voi
 
         <div className="p-10 flex flex-col gap-10">
           {activeTab === 'dashboard' && <OverviewTab stats={stats} />}
-          {activeTab === 'products' && <ProductsTab products={products} onDelete={handleDelete} />}
+          {activeTab === 'products' && <ProductsTab products={products} categories={categories} onDelete={handleDelete} onRefresh={fetchData} />}
           {activeTab === 'orders' && <OrdersTab />}
           {activeTab === 'leads' && <LeadsTab />}
           {activeTab === 'settings' && <SettingsTab />}
@@ -372,92 +379,135 @@ function OverviewTab({ stats }: { stats: Stat[] }) {
   );
 }
 
-function ProductsTab({ products, onDelete }: { products: Product[], onDelete: (id: string) => void }) {
+function ProductsTab({ products, categories, onDelete, onRefresh }: { products: Product[], categories: Category[], onDelete: (id: string) => void, onRefresh: () => void }) {
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | undefined>();
+
+  const openAddProduct = () => {
+    setEditingProduct(undefined);
+    setIsProductModalOpen(true);
+  };
+
+  const openEditProduct = (product: Product) => {
+    setEditingProduct(product);
+    setIsProductModalOpen(true);
+  };
+
   return (
-    <div className="bg-neutral-dark rounded-xl border border-neutral-border overflow-hidden shadow-xl">
-      <div className="px-8 py-6 border-b border-neutral-border flex justify-between items-center bg-neutral-dark/50">
-        <h3 className="text-lg font-bold text-slate-100">Current Catalog</h3>
-        <div className="flex gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 text-xs font-bold bg-background-dark border border-neutral-border rounded-lg text-slate-400 hover:text-primary transition-colors">
-            <Filter size={16} />
-            Filter
-          </button>
-          <button className="flex items-center gap-2 px-4 py-2 text-xs font-bold bg-background-dark border border-neutral-border rounded-lg text-slate-400 hover:text-primary transition-colors">
-            <Download size={16} />
-            Export
-          </button>
+    <>
+      <div className="flex gap-4 justify-end mb-4">
+        <button onClick={() => setIsCategoryModalOpen(true)} className="bg-neutral-dark hover:bg-neutral-dark/80 text-secondary px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-transform border border-neutral-border">
+          <Settings size={18} />
+          Manage Categories
+        </button>
+        <button onClick={openAddProduct} className="bg-primary hover:bg-primary/90 text-background-dark px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-transform shadow-lg shadow-primary/10">
+          <PlusCircle size={18} />
+          Add Product
+        </button>
+      </div>
+      <div className="bg-neutral-dark rounded-xl border border-neutral-border overflow-hidden shadow-xl">
+        <div className="px-8 py-6 border-b border-neutral-border flex justify-between items-center bg-neutral-dark/50">
+          <h3 className="text-lg font-bold text-slate-100">Current Catalog</h3>
+          <div className="flex gap-2">
+            <button className="flex items-center gap-2 px-4 py-2 text-xs font-bold bg-background-dark border border-neutral-border rounded-lg text-slate-400 hover:text-primary transition-colors">
+              <Filter size={16} />
+              Filter
+            </button>
+            <button className="flex items-center gap-2 px-4 py-2 text-xs font-bold bg-background-dark border border-neutral-border rounded-lg text-slate-400 hover:text-primary transition-colors">
+              <Download size={16} />
+              Export
+            </button>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="bg-background-dark text-slate-400 uppercase text-[10px] font-bold tracking-widest">
+              <tr>
+                <th className="px-8 py-4 w-20">Image</th>
+                <th className="px-8 py-4">Product Name</th>
+                <th className="px-8 py-4">Category</th>
+                <th className="px-8 py-4">Price (DOP)</th>
+                <th className="px-8 py-4">Status</th>
+                <th className="px-8 py-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-neutral-border">
+              {products.map((product) => (
+                <tr key={product.id} className="hover:bg-primary/5 transition-colors group">
+                  <td className="px-8 py-5">
+                    <div
+                      className="w-14 h-14 rounded-lg bg-neutral-border bg-center bg-no-repeat bg-cover border border-primary/10 overflow-hidden"
+                      style={{ backgroundImage: `url(${product.image})` }}
+                    />
+                  </td>
+                  <td className="px-8 py-5">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-slate-100">{product.name}</span>
+                      <span className="text-xs text-slate-400">SKU: {product.sku}</span>
+                    </div>
+                  </td>
+                  <td className="px-8 py-5">
+                    <span className="px-3 py-1 text-[10px] font-bold rounded-full bg-primary/20 text-primary uppercase tracking-tight">
+                      {product.category}
+                    </span>
+                  </td>
+                  <td className="px-8 py-5">
+                    <span className="text-sm font-bold text-slate-100">${product.price.toLocaleString()}</span>
+                  </td>
+                  <td className="px-8 py-5">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${product.status === 'In Stock' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                      <span className="text-xs font-medium text-slate-400">{product.status}</span>
+                    </div>
+                  </td>
+                  <td className="px-8 py-5 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <button onClick={() => openEditProduct(product)} className="p-2 text-slate-400 hover:text-primary transition-colors">
+                        <Edit2 size={18} />
+                      </button>
+                      <button onClick={() => onDelete(product.id)} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="px-8 py-5 flex items-center justify-between bg-background-dark border-t border-neutral-border">
+          <span className="text-xs text-slate-500">Showing {products.length} results</span>
+          <div className="flex gap-1">
+            <button className="w-8 h-8 rounded flex items-center justify-center text-slate-400 hover:bg-neutral-border transition-colors">
+              <ChevronLeft size={16} />
+            </button>
+            <button className="w-8 h-8 rounded flex items-center justify-center text-background-dark bg-primary text-xs font-bold">1</button>
+            <button className="w-8 h-8 rounded flex items-center justify-center text-slate-400 hover:bg-neutral-border transition-colors">
+              <ChevronRight size={16} />
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left">
-          <thead className="bg-background-dark text-slate-400 uppercase text-[10px] font-bold tracking-widest">
-            <tr>
-              <th className="px-8 py-4 w-20">Image</th>
-              <th className="px-8 py-4">Product Name</th>
-              <th className="px-8 py-4">Category</th>
-              <th className="px-8 py-4">Price (DOP)</th>
-              <th className="px-8 py-4">Status</th>
-              <th className="px-8 py-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-border">
-            {products.map((product) => (
-              <tr key={product.id} className="hover:bg-primary/5 transition-colors group">
-                <td className="px-8 py-5">
-                  <div
-                    className="w-14 h-14 rounded-lg bg-neutral-border bg-center bg-no-repeat bg-cover border border-primary/10 overflow-hidden"
-                    style={{ backgroundImage: `url(${product.image})` }}
-                  />
-                </td>
-                <td className="px-8 py-5">
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold text-slate-100">{product.name}</span>
-                    <span className="text-xs text-slate-400">SKU: {product.sku}</span>
-                  </div>
-                </td>
-                <td className="px-8 py-5">
-                  <span className="px-3 py-1 text-[10px] font-bold rounded-full bg-primary/20 text-primary uppercase tracking-tight">
-                    {product.category}
-                  </span>
-                </td>
-                <td className="px-8 py-5">
-                  <span className="text-sm font-bold text-slate-100">${product.price.toLocaleString()}</span>
-                </td>
-                <td className="px-8 py-5">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${product.status === 'In Stock' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                    <span className="text-xs font-medium text-slate-400">{product.status}</span>
-                  </div>
-                </td>
-                <td className="px-8 py-5 text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    <button className="p-2 text-slate-400 hover:text-primary transition-colors">
-                      <Edit2 size={18} />
-                    </button>
-                    <button onClick={() => onDelete(product.id)} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="px-8 py-5 flex items-center justify-between bg-background-dark border-t border-neutral-border">
-        <span className="text-xs text-slate-500">Showing {products.length} results</span>
-        <div className="flex gap-1">
-          <button className="w-8 h-8 rounded flex items-center justify-center text-slate-400 hover:bg-neutral-border transition-colors">
-            <ChevronLeft size={16} />
-          </button>
-          <button className="w-8 h-8 rounded flex items-center justify-center text-background-dark bg-primary text-xs font-bold">1</button>
-          <button className="w-8 h-8 rounded flex items-center justify-center text-slate-400 hover:bg-neutral-border transition-colors">
-            <ChevronRight size={16} />
-          </button>
-        </div>
-      </div>
-    </div>
+      {isProductModalOpen && (
+        <ProductModal
+          product={editingProduct}
+          categories={categories}
+          onClose={() => setIsProductModalOpen(false)}
+          onRefresh={onRefresh}
+        />
+      )}
+
+      {isCategoryModalOpen && (
+        <CategoryModal
+          categories={categories}
+          onClose={() => setIsCategoryModalOpen(false)}
+          onRefresh={onRefresh}
+        />
+      )}
+    </>
   );
 }
 
@@ -734,5 +784,204 @@ function LoginScreen({ onLoginSuccess, onGoToCatalog }: { onLoginSuccess: () => 
         </div>
       </div>
     </motion.div>
+  );
+}
+
+function ProductModal({ product, categories, onClose, onRefresh }: { product?: Product, categories: Category[], onClose: () => void, onRefresh: () => void }) {
+  const [formData, setFormData] = useState<Partial<Product>>(product || {
+    name: '', sku: '', category: categories[0]?.name || '', price: 0, status: 'In Stock', image: '', gender: 'Unisex', brand: ''
+  });
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: any) => {
+    e.preventDefault();
+    setLoading(true);
+    const token = localStorage.getItem('admin_token');
+
+    try {
+      const res = await fetch(`/api/products.php${product ? `?id=${product.id}` : ''}`, {
+        method: product ? 'PUT' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(formData)
+      });
+
+      if (res.ok) {
+        onRefresh();
+        onClose();
+      } else {
+        alert('Failed to save product');
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background-dark/80 backdrop-blur-sm">
+      <div className="bg-neutral-dark border border-neutral-border rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl">
+        <div className="px-6 py-4 border-b border-neutral-border flex justify-between items-center bg-background-dark/50">
+          <h2 className="text-lg font-bold text-slate-100">{product ? 'Edit Product' : 'Add New Product'}</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 grid grid-cols-2 gap-4">
+          <label className="col-span-2 flex flex-col gap-1">
+            <span className="text-xs font-semibold text-slate-400">Name</span>
+            <input required type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="bg-background-dark border border-neutral-border rounded-lg px-3 py-2 text-sm text-slate-100 focus:ring-1 focus:ring-primary" />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-semibold text-slate-400">SKU</span>
+            <input required type="text" value={formData.sku} onChange={e => setFormData({ ...formData, sku: e.target.value })} className="bg-background-dark border border-neutral-border rounded-lg px-3 py-2 text-sm text-slate-100 focus:ring-1 focus:ring-primary" />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-semibold text-slate-400">Price (DOP)</span>
+            <input required type="number" value={formData.price} onChange={e => setFormData({ ...formData, price: Number(e.target.value) })} className="bg-background-dark border border-neutral-border rounded-lg px-3 py-2 text-sm text-slate-100 focus:ring-1 focus:ring-primary" />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-semibold text-slate-400">Category</span>
+            <select required value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} className="bg-background-dark border border-neutral-border rounded-lg px-3 py-2 text-sm text-slate-100 focus:ring-1 focus:ring-primary">
+              <option value="">Select Category</option>
+              {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-semibold text-slate-400">Gender</span>
+            <select required value={formData.gender} onChange={e => setFormData({ ...formData, gender: e.target.value as any })} className="bg-background-dark border border-neutral-border rounded-lg px-3 py-2 text-sm text-slate-100 focus:ring-1 focus:ring-primary">
+              <option value="Unisex">Unisex</option>
+              <option value="Hombres">Hombres</option>
+              <option value="Mujeres">Mujeres</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-semibold text-slate-400">Brand</span>
+            <input required type="text" value={formData.brand} onChange={e => setFormData({ ...formData, brand: e.target.value })} className="bg-background-dark border border-neutral-border rounded-lg px-3 py-2 text-sm text-slate-100 focus:ring-1 focus:ring-primary" />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-semibold text-slate-400">Status</span>
+            <select required value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value as any })} className="bg-background-dark border border-neutral-border rounded-lg px-3 py-2 text-sm text-slate-100 focus:ring-1 focus:ring-primary">
+              <option value="In Stock">In Stock</option>
+              <option value="Low Stock">Low Stock</option>
+              <option value="Out of Stock">Out of Stock</option>
+            </select>
+          </label>
+          <label className="col-span-2 flex flex-col gap-1">
+            <span className="text-xs font-semibold text-slate-400">Image URL</span>
+            <input required type="url" value={formData.image} onChange={e => setFormData({ ...formData, image: e.target.value })} className="bg-background-dark border border-neutral-border rounded-lg px-3 py-2 text-sm text-slate-100 focus:ring-1 focus:ring-primary" placeholder="https://..." />
+          </label>
+
+          <div className="col-span-2 flex justify-end gap-3 mt-4 pt-4 border-t border-neutral-border">
+            <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg text-sm text-slate-400 hover:text-white">Cancel</button>
+            <button type="submit" disabled={loading} className="px-6 py-2 rounded-lg text-sm font-bold bg-primary text-background-dark hover:bg-primary/90 shadow-lg disabled:opacity-50">
+              {loading ? 'Saving...' : 'Save Product'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function CategoryModal({ categories, onClose, onRefresh }: { categories: Category[], onClose: () => void, onRefresh: () => void }) {
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleAddCategory = async (e: any) => {
+    e.preventDefault();
+    if (!newCategoryName) return;
+    setLoading(true);
+    const token = localStorage.getItem('admin_token');
+
+    try {
+      const res = await fetch(`/api/categories.php`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ name: newCategoryName })
+      });
+
+      if (res.ok) {
+        setNewCategoryName('');
+        onRefresh();
+      } else {
+        alert('Failed to add category');
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this category?')) return;
+    const token = localStorage.getItem('admin_token');
+
+    try {
+      const res = await fetch(`/api/categories.php?id=${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (res.ok) {
+        onRefresh();
+      } else {
+        alert('Failed to delete category');
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background-dark/80 backdrop-blur-sm">
+      <div className="bg-neutral-dark border border-neutral-border rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+        <div className="px-6 py-4 border-b border-neutral-border flex justify-between items-center bg-background-dark/50">
+          <h2 className="text-lg font-bold text-slate-100">Manage Categories</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="p-6">
+          <form onSubmit={handleAddCategory} className="flex gap-2 mb-6">
+            <input
+              type="text"
+              placeholder="New Category Name"
+              value={newCategoryName}
+              onChange={e => setNewCategoryName(e.target.value)}
+              className="flex-1 bg-background-dark border border-neutral-border rounded-lg px-3 py-2 text-sm text-slate-100 focus:ring-1 focus:ring-primary"
+            />
+            <button type="submit" disabled={loading || !newCategoryName} className="px-4 py-2 bg-primary text-background-dark font-bold rounded-lg text-sm hover:bg-primary/90 disabled:opacity-50">
+              Add
+            </button>
+          </form>
+
+          <div className="bg-background-dark/50 rounded-lg border border-neutral-border max-h-60 overflow-y-auto">
+            {categories.map(c => (
+              <div key={c.id} className="flex justify-between items-center px-4 py-3 border-b border-neutral-border last:border-0 hover:bg-white/5">
+                <span className="text-sm font-medium text-slate-200">{c.name}</span>
+                <button onClick={() => handleDeleteCategory(c.id)} className="p-1 text-slate-500 hover:text-red-500 transition-colors">
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+            {categories.length === 0 && (
+              <div className="p-4 text-center text-sm text-slate-500">No categories found.</div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

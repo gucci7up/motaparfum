@@ -40,7 +40,24 @@ CREATE TABLE IF NOT EXISTS `admins` (
   UNIQUE KEY `username` (`username`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS `categories` (
+  `id` varchar(36) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `name` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Insert mock data
+INSERT INTO `categories` (`id`, `name`) VALUES
+('c1', 'Woody Exotic'),
+('c2', 'Fresh Aquatic'),
+('c3', 'Floral Night'),
+('c4', 'Oriental Gold'),
+('c5', 'Essenze di Roma'),
+('c6', 'Radiance Series')
+ON DUPLICATE KEY UPDATE name=VALUES(name);
+
 INSERT INTO `products` (`id`, `name`, `sku`, `category`, `price`, `status`, `image`, `gender`, `brand`) VALUES
 ('1', 'Royal Oud Premium', 'RD-RO-001', 'Woody Exotic', 14500.00, 'In Stock', 'https://images.unsplash.com/photo-1541643600914-78b084683601?auto=format&fit=crop&q=80&w=400&h=500', 'Hombres', 'Essenze di Roma'),
 ('2', 'Ocean Breeze Intense', 'RD-OB-042', 'Fresh Aquatic', 9800.00, 'In Stock', 'https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&q=80&w=400&h=500', 'Hombres', 'Parfum de Luxe'),

@@ -18,3 +18,8 @@ export interface Stat {
   icon: string;
   trend: 'up' | 'down';
 }
+
+export interface Category {
+  id: string;
+  name: string;
+}
