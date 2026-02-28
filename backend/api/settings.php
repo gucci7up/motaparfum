@@ -71,20 +71,34 @@ if ($method === 'GET') {
         }
 
         // Handle file upload
-        if (isset($_FILES['store_logo_file']) && $_FILES['store_logo_file']['error'] === UPLOAD_ERR_OK) {
-            $uploadDir = 'uploads/';
-            if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0755, true);
-            }
+        if (isset($_FILES['store_logo_file'])) {
+            if ($_FILES['store_logo_file']['error'] === UPLOAD_ERR_OK) {
+                $uploadDir = __DIR__ . '/uploads/';
+                if (!is_dir($uploadDir)) {
+                    if (!mkdir($uploadDir, 0777, true)) {
+                        throw new PDOException('Failed to create uploads directory.');
+                    }
+                }
 
-            $file = $_FILES['store_logo_file'];
-            $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
-            $filename = 'logo_' . time() . '.' . $extension;
-            $targetPath = $uploadDir . $filename;
+                $file = $_FILES['store_logo_file'];
+                $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
 
-            if (move_uploaded_file($file['tmp_name'], $targetPath)) {
-                $fileUrl = '/api/uploads/' . $filename;
-                $stmt->execute(['store_logo', $fileUrl, $fileUrl]);
+                if (in_array($extension, $allowedExtensions)) {
+                    $filename = 'logo_' . time() . '.' . $extension;
+                    $targetPath = $uploadDir . $filename;
+
+                    if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+                        $fileUrl = '/api/uploads/' . $filename;
+                        $stmt->execute(['store_logo', $fileUrl, $fileUrl]);
+                    } else {
+                        throw new PDOException('Failed to move uploaded file.');
+                    }
+                } else {
+                    throw new PDOException('Invalid file extension.');
+                }
+            } else {
+                throw new PDOException('Upload error: ' . $_FILES['store_logo_file']['error']);
             }
         }
 

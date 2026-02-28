@@ -327,13 +327,19 @@ function DashboardScreen({ onGoToCatalog, onLogout, settings }: { onGoToCatalog:
       <aside className="w-64 flex flex-col border-r border-neutral-border h-full bg-background-dark">
         <div className="p-6 flex flex-col gap-8 h-full">
           <div className="flex items-center gap-3">
-            <div className="bg-primary rounded-lg p-2 text-background-dark">
-              <Star className="size-6 fill-current" />
-            </div>
-            <div className="flex flex-col">
-              <h1 className="text-slate-100 text-base font-bold leading-tight">Luxury Perfume RD</h1>
-              <p className="text-primary/70 text-xs font-medium">Admin Terminal</p>
-            </div>
+            {settings?.store_logo ? (
+              <img src={settings.store_logo} alt={settings?.store_name || 'Logo'} className="h-10 w-auto object-contain" />
+            ) : (
+              <>
+                <div className="bg-primary rounded-lg p-2 text-background-dark">
+                  <Star className="size-6 fill-current" />
+                </div>
+                <div className="flex flex-col">
+                  <h1 className="text-slate-100 text-base font-bold leading-tight">{settings?.store_name || 'Luxury Perfume RD'}</h1>
+                  <p className="text-primary/70 text-xs font-medium">Admin Terminal</p>
+                </div>
+              </>
+            )}
           </div>
 
           <nav className="flex flex-col gap-2 flex-1">
@@ -385,13 +391,8 @@ function DashboardScreen({ onGoToCatalog, onLogout, settings }: { onGoToCatalog:
               <Bell size={20} />
             </button>
             <div className="flex items-center gap-3 ml-2 cursor-pointer">
-              <div className="w-10 h-10 rounded-full bg-neutral-border flex items-center justify-center overflow-hidden border border-primary/20">
-                <img
-                  className="w-full h-full object-cover"
-                  src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=100&h=100"
-                  alt="Admin"
-                  referrerPolicy="no-referrer"
-                />
+              <div className="w-10 h-10 rounded-full bg-neutral-border flex items-center justify-center overflow-hidden border border-primary/20 text-slate-400">
+                <User size={20} />
               </div>
             </div>
           </div>
