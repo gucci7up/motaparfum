@@ -296,8 +296,8 @@ function PublicCatalog({ onGoToAdmin, settings }: { onGoToAdmin: () => void, set
 function DashboardScreen({ onGoToCatalog, onLogout, settings }: { onGoToCatalog: () => void, onLogout: () => void, settings: AppSettings | null }) {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'products' | 'orders' | 'leads' | 'settings'>('dashboard');
   const [products, setProducts] = useState<Product[]>([]);
-  const [stats, setStats] = useState<Stat[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [leadsCount, setLeadsCount] = useState(0);
 
   const fetchData = () => {
     fetch('/api/products.php')
@@ -305,10 +305,10 @@ function DashboardScreen({ onGoToCatalog, onLogout, settings }: { onGoToCatalog:
       .then(data => setProducts(data))
       .catch(err => console.error('Error fetching products:', err));
 
-    fetch('/api/stats.php')
+    fetch('/api/leads.php', { headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` } })
       .then(res => res.json())
-      .then(data => setStats(data))
-      .catch(err => console.error('Error fetching stats:', err));
+      .then(data => Array.isArray(data) && setLeadsCount(data.length))
+      .catch(() => { });
 
     fetch('/api/categories.php')
       .then(res => res.json())
@@ -424,7 +424,7 @@ function DashboardScreen({ onGoToCatalog, onLogout, settings }: { onGoToCatalog:
         </header>
 
         <div className="p-10 flex flex-col gap-10">
-          {activeTab === 'dashboard' && <OverviewTab stats={stats} />}
+          {activeTab === 'dashboard' && <OverviewTab products={products} leadsCount={leadsCount} />}
           {activeTab === 'products' && <ProductsTab products={products} categories={categories} onDelete={handleDelete} onRefresh={fetchData} />}
           {activeTab === 'orders' && <OrdersTab />}
           {activeTab === 'leads' && <LeadsTab settings={settings} />}
@@ -444,12 +444,108 @@ function DashboardScreen({ onGoToCatalog, onLogout, settings }: { onGoToCatalog:
   );
 }
 
-function OverviewTab({ stats }: { stats: Stat[] }) {
+function OverviewTab({ products, leadsCount }: { products: Product[], leadsCount: number }) {
+  const totalProducts = products.length;
+  const inStock = products.filter(p => p.status === 'In Stock').length;
+  const totalStock = products.reduce((sum, p) => sum + (p.stock || 0), 0);
+  const totalValue = products.reduce((sum, p) => sum + (p.price * (p.stock || 0)), 0);
+
+  const statCards = [
+    {
+      label: 'Total Products',
+      value: totalProducts,
+      sub: `${inStock} in stock`,
+      icon: <Package className="size-5" />,
+      color: 'text-primary',
+      bg: 'bg-primary/10',
+    },
+    {
+      label: 'Total Stock Units',
+      value: totalStock,
+      sub: `${products.filter(p => p.status === 'Out of Stock').length} out of stock`,
+      icon: <ShoppingCart className="size-5" />,
+      color: 'text-blue-400',
+      bg: 'bg-blue-400/10',
+    },
+    {
+      label: 'WhatsApp Leads',
+      value: leadsCount,
+      sub: 'Total captured',
+      icon: <MessageSquare className="size-5" />,
+      color: 'text-green-400',
+      bg: 'bg-green-400/10',
+    },
+    {
+      label: 'Catalog Value',
+      value: `RD$ ${totalValue.toLocaleString()}`,
+      sub: 'Price × stock',
+      icon: <DollarSign className="size-5" />,
+      color: 'text-amber-400',
+      bg: 'bg-amber-400/10',
+    },
+  ];
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {stats.map((stat, idx) => (
-        <StatCard key={idx} stat={stat} />
-      ))}
+    <div className="flex flex-col gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {statCards.map((card, i) => (
+          <div key={i} className="glass-card p-6 rounded-2xl border border-white/5 flex flex-col gap-4">
+            <div className={`w-10 h-10 rounded-xl ${card.bg} ${card.color} flex items-center justify-center`}>
+              {card.icon}
+            </div>
+            <div>
+              <p className="text-slate-400 text-xs font-semibold uppercase tracking-widest mb-1">{card.label}</p>
+              <p className={`text-2xl font-black ${card.color}`}>{card.value}</p>
+              <p className="text-slate-600 text-xs mt-1">{card.sub}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Product breakdown table */}
+      {products.length > 0 && (
+        <div className="glass-card rounded-2xl border border-white/5 overflow-hidden">
+          <div className="px-6 py-4 border-b border-white/5">
+            <h3 className="text-sm font-bold text-slate-300 uppercase tracking-widest">Product Summary</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-background-dark/60 text-slate-500 text-[10px] uppercase tracking-widest">
+                <tr>
+                  <th className="px-6 py-3">Product</th>
+                  <th className="px-6 py-3">Category</th>
+                  <th className="px-6 py-3">Stock</th>
+                  <th className="px-6 py-3">Price</th>
+                  <th className="px-6 py-3">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {products.map(p => (
+                  <tr key={p.id} className="hover:bg-white/5 transition-colors">
+                    <td className="px-6 py-3 font-semibold text-slate-200">{p.name}</td>
+                    <td className="px-6 py-3 text-slate-400">{p.category}</td>
+                    <td className="px-6 py-3 text-slate-300">{p.stock}</td>
+                    <td className="px-6 py-3 text-primary font-bold">RD$ {p.price.toLocaleString()}</td>
+                    <td className="px-6 py-3">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${p.status === 'In Stock' ? 'bg-emerald-500/20 text-emerald-400'
+                          : p.status === 'Low Stock' ? 'bg-amber-500/20 text-amber-400'
+                            : 'bg-red-500/20 text-red-400'
+                        }`}>{p.status}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {products.length === 0 && (
+        <div className="glass-card rounded-2xl border border-white/5 p-12 text-center">
+          <Package className="size-10 text-slate-600 mx-auto mb-3" />
+          <p className="text-slate-500 text-sm">No products yet. Add your first product in the Products tab.</p>
+        </div>
+      )}
     </div>
   );
 }
