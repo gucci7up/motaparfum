@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   LayoutDashboard, 
@@ -29,82 +29,6 @@ import {
 } from 'lucide-react';
 import { Product, Stat } from './types';
 
-const MOCK_PRODUCTS: Product[] = [
-  {
-    id: '1',
-    name: 'Royal Oud Premium',
-    sku: 'RD-RO-001',
-    category: 'Woody Exotic',
-    price: 14500,
-    status: 'In Stock',
-    image: 'https://images.unsplash.com/photo-1541643600914-78b084683601?auto=format&fit=crop&q=80&w=400&h=500',
-    gender: 'Hombres',
-    brand: 'Essenze di Roma'
-  },
-  {
-    id: '2',
-    name: 'Ocean Breeze Intense',
-    sku: 'RD-OB-042',
-    category: 'Fresh Aquatic',
-    price: 9800,
-    status: 'In Stock',
-    image: 'https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&q=80&w=400&h=500',
-    gender: 'Hombres',
-    brand: 'Parfum de Luxe'
-  },
-  {
-    id: '3',
-    name: 'Midnight Rose Noir',
-    sku: 'RD-MR-008',
-    category: 'Floral Night',
-    price: 12200,
-    status: 'Low Stock',
-    image: 'https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&q=80&w=400&h=500',
-    gender: 'Mujeres',
-    brand: 'Radiance Series'
-  },
-  {
-    id: '4',
-    name: 'Golden Amber Spirit',
-    sku: 'RD-GA-015',
-    category: 'Oriental Gold',
-    price: 16900,
-    status: 'In Stock',
-    image: 'https://images.unsplash.com/photo-1595428774223-ef52624120d2?auto=format&fit=crop&q=80&w=400&h=500',
-    gender: 'Unisex',
-    brand: 'Prestige Bloom'
-  },
-  {
-    id: '5',
-    name: 'Fragancia Imperial',
-    sku: 'RD-FI-099',
-    category: 'Essenze di Roma',
-    price: 8200,
-    status: 'In Stock',
-    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=400&h=500',
-    gender: 'Hombres',
-    brand: 'Essenze di Roma'
-  },
-  {
-    id: '6',
-    name: 'Velvet Rose',
-    sku: 'RD-VR-102',
-    category: 'Radiance Series',
-    price: 7900,
-    status: 'In Stock',
-    image: 'https://images.unsplash.com/photo-1585120040315-2241b774ad0f?auto=format&fit=crop&q=80&w=400&h=500',
-    gender: 'Mujeres',
-    brand: 'Radiance Series'
-  }
-];
-
-const STATS: Stat[] = [
-  { label: 'Total Products', value: '1,240', change: '12%', icon: 'package', trend: 'up' },
-  { label: 'Recent Clicks', value: '8,432', change: '5%', icon: 'mouse-pointer', trend: 'up' },
-  { label: 'WhatsApp Leads', value: '156', change: '8%', icon: 'message-square', trend: 'up' },
-  { label: 'Revenue Growth', value: '$12.5k', change: '18%', icon: 'dollar-sign', trend: 'up' },
-];
-
 export default function App() {
   const [view, setView] = useState<'catalog' | 'admin'>('catalog');
 
@@ -122,6 +46,15 @@ export default function App() {
 }
 
 function PublicCatalog({ onGoToAdmin }: { onGoToAdmin: () => void }) {
+  const [products, setProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    fetch('/api/products.php')
+      .then(res => res.json())
+      .then(data => setProducts(data))
+      .catch(err => console.error('Error fetching products:', err));
+  }, []);
+
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -191,7 +124,7 @@ function PublicCatalog({ onGoToAdmin }: { onGoToAdmin: () => void }) {
               <div className="h-px flex-1 bg-gradient-to-r from-white/20 to-transparent"></div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-24 gap-x-12 mb-20">
-              {MOCK_PRODUCTS.filter(p => p.gender === gender).map((product) => (
+              {products.filter(p => p.gender === gender).map((product) => (
                 <div key={product.id} className="relative group">
                   <div className="relative aspect-[4/5] flex flex-col items-center justify-center">
                     <div className="absolute bottom-12 w-48 h-12 bg-neutral-dark border-t border-primary/30 rounded-[50%] pedestal-shadow transform transition-transform group-hover:scale-110"></div>
@@ -274,6 +207,36 @@ function PublicCatalog({ onGoToAdmin }: { onGoToAdmin: () => void }) {
 }
 
 function DashboardScreen({ onGoToCatalog }: { onGoToCatalog: () => void }) {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [stats, setStats] = useState<Stat[]>([]);
+
+  const fetchData = () => {
+    fetch('/api/products.php')
+      .then(res => res.json())
+      .then(data => setProducts(data))
+      .catch(err => console.error('Error fetching products:', err));
+
+    fetch('/api/stats.php')
+      .then(res => res.json())
+      .then(data => setStats(data))
+      .catch(err => console.error('Error fetching stats:', err));
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleDelete = async (id: string) => {
+    if (confirm('Are you sure you want to delete this product?')) {
+      try {
+        await fetch(`/api/products.php?id=${id}`, { method: 'DELETE' });
+        fetchData();
+      } catch (err) {
+        console.error('Error deleting:', err);
+      }
+    }
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -354,7 +317,7 @@ function DashboardScreen({ onGoToCatalog }: { onGoToCatalog: () => void }) {
         <div className="p-10 flex flex-col gap-10">
           {/* Stats */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {STATS.map((stat, idx) => (
+            {stats.map((stat, idx) => (
               <StatCard key={idx} stat={stat} />
             ))}
           </div>
@@ -388,7 +351,7 @@ function DashboardScreen({ onGoToCatalog }: { onGoToCatalog: () => void }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-border">
-                  {MOCK_PRODUCTS.map((product) => (
+                  {products.map((product) => (
                     <tr key={product.id} className="hover:bg-primary/5 transition-colors group">
                       <td className="px-8 py-5">
                         <div 
@@ -421,7 +384,7 @@ function DashboardScreen({ onGoToCatalog }: { onGoToCatalog: () => void }) {
                           <button className="p-2 text-slate-400 hover:text-primary transition-colors">
                             <Edit2 size={18} />
                           </button>
-                          <button className="p-2 text-slate-400 hover:text-red-500 transition-colors">
+                          <button onClick={() => handleDelete(product.id)} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
                             <Trash2 size={18} />
                           </button>
                         </div>
