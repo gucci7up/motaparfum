@@ -741,8 +741,15 @@ function SettingsTab({ onRefresh, settings }: { onRefresh: () => void, settings:
   };
 
   const handleSave = async () => {
+    setSaveError(null);
     setLoading(true);
     const token = localStorage.getItem('admin_token');
+
+    if (!token) {
+      setSaveError('No auth token found. Please log out and log in again.');
+      setLoading(false);
+      return;
+    }
 
     // Use FormData to support file uploads
     const data = new FormData();
@@ -750,6 +757,10 @@ function SettingsTab({ onRefresh, settings }: { onRefresh: () => void, settings:
     data.append('support_email', formData.support_email);
     data.append('whatsapp_number', formData.whatsapp_number);
     data.append('primary_color', formData.primary_color);
+    if (formData.store_logo && !logoFile) {
+      // URL-based logo (typed in the URL field)
+      data.append('store_logo', formData.store_logo);
+    }
     if (logoFile) {
       data.append('store_logo_file', logoFile);
     }
@@ -762,15 +773,21 @@ function SettingsTab({ onRefresh, settings }: { onRefresh: () => void, settings:
         },
         body: data
       });
-      const json = await res.json();
-      if (res.ok && json.success) {
-        alert('Settings saved successfully! Refreshing...');
+
+      // Read body as text first so we don't crash on non-JSON responses
+      const text = await res.text();
+      let json: any = null;
+      try { json = JSON.parse(text); } catch { /* not JSON */ }
+
+      if (res.ok && json?.success) {
+        alert('¡Guardado exitosamente! Recargando...');
         window.location.reload();
       } else {
-        setSaveError(json.error || 'Failed to save settings.');
+        const msg = json?.error || `HTTP ${res.status}: ${text.substring(0, 200)}`;
+        setSaveError(msg);
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      setSaveError('Network error: ' + (err?.message || String(err)));
     } finally {
       setLoading(false);
     }
