@@ -127,30 +127,6 @@ switch ($method) {
                 }
             }
         } elseif ($method === 'PUT') {
-
-            $id = uniqid();
-            $sql = "INSERT INTO products (id, name, sku, category, price, status, image, gender, brand) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-            try {
-                $stmt = $pdo->prepare($sql);
-                $stmt->execute([
-                    $id,
-                    $data['name'],
-                    $data['sku'],
-                    $data['category'],
-                    $data['price'],
-                    $data['status'],
-                    $data['image'],
-                    $data['gender'],
-                    $data['brand']
-                ]);
-                http_response_code(201);
-                echo json_encode(['id' => $id, 'message' => 'Product created']);
-            } catch (PDOException $e) {
-                http_response_code(500);
-                echo json_encode(['error' => $e->getMessage()]);
-            }
-        } elseif ($method === 'PUT') {
             $data = json_decode(file_get_contents('php://input'), true);
             if (!$data || !isset($_GET['id'])) {
                 http_response_code(400);

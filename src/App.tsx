@@ -1232,23 +1232,30 @@ function ProductModal({ product, categories, onClose, onRefresh }: { product?: P
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const [errorMsg, setErrorMsg] = useState('');
+
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMsg('');
     const token = localStorage.getItem('admin_token');
 
     const isUpdate = !!product;
     const url = `/api/products.php${isUpdate ? `?id=${product.id}` : ''}`;
 
-    // We send data through FormData to support file uplads
     const submitData = new FormData();
     Object.keys(formData).forEach(key => {
-      submitData.append(key, formData[key as keyof Product] as any);
+      if (key !== 'image') {
+        submitData.append(key, formData[key as keyof Product] as string | Blob);
+      }
     });
 
     if (imageFile) {
       submitData.append('image', imageFile);
+    } else if (formData.image) {
+      submitData.append('image', formData.image);
     }
+
     if (isUpdate) {
       submitData.append('_method', 'PUT');
     }
@@ -1266,10 +1273,12 @@ function ProductModal({ product, categories, onClose, onRefresh }: { product?: P
         onRefresh();
         onClose();
       } else {
-        alert('Failed to save product');
+        const errorData = await res.json().catch(() => ({}));
+        setErrorMsg(errorData.error || 'No se pudo guardar el producto. Verifica la conectividad.');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setErrorMsg(err.message || 'Error de conexión');
     } finally {
       setLoading(false);
     }
@@ -1284,6 +1293,12 @@ function ProductModal({ product, categories, onClose, onRefresh }: { product?: P
             <X size={20} />
           </button>
         </div>
+
+        {errorMsg && (
+          <div className="mx-6 mt-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm font-medium">
+            {errorMsg}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="p-6 grid grid-cols-2 gap-4">
           <label className="col-span-2 flex flex-col gap-1">
