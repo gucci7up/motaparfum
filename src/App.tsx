@@ -750,8 +750,13 @@ function SettingsTab({ onRefresh, settings }: { onRefresh: () => void, settings:
       canvas.width = w;
       canvas.height = h;
       const ctx = canvas.getContext('2d');
-      ctx?.drawImage(img, 0, 0, w, h);
-      const compressed = canvas.toDataURL('image/png', 0.8);
+      if (ctx) {
+        // Clear to fully transparent (default canvas is opaque white on some browsers)
+        ctx.clearRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+      }
+      // toDataURL with 'image/png' preserves transparency (quality param is ignored for PNG)
+      const compressed = canvas.toDataURL('image/png');
       setLogoPreview(compressed);
       URL.revokeObjectURL(objectUrl);
     };
