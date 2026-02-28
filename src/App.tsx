@@ -381,11 +381,6 @@ function DashboardScreen({ onGoToCatalog, onLogout, settings }: { onGoToCatalog:
           </div>
 
           <div className="flex items-center gap-4">
-            <button className="bg-primary hover:bg-primary/90 text-background-dark px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-transform active:scale-95 shadow-lg shadow-primary/10">
-              <PlusCircle size={18} />
-              Add New
-            </button>
-            <div className="h-10 w-px bg-neutral-border mx-2"></div>
             <button className="p-2 text-slate-400 hover:text-primary transition-colors">
               <Bell size={20} />
             </button>
