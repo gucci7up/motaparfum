@@ -191,9 +191,9 @@ function PublicCatalog({ onGoToAdmin, settings }: { onGoToAdmin: () => void, set
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-y-16 gap-x-4 md:gap-x-12 mb-20">
               {products.filter(p => p.gender === gender).map((product) => (
                 <div key={product.id} className="relative group">
-                  <div className="relative aspect-[4/5] flex flex-col items-center justify-center">
-                    <div className="absolute bottom-6 md:bottom-12 w-24 md:w-48 h-8 md:h-12 bg-neutral-dark border-t border-primary/30 rounded-[50%] pedestal-shadow transform transition-transform group-hover:scale-110"></div>
-                    <div className="relative z-10 w-28 h-40 md:w-52 md:h-64 transition-all duration-700 group-hover:-translate-y-4 md:group-hover:-translate-y-8 group-hover:rotate-2">
+                  <div className="relative aspect-square md:aspect-[4/5] flex flex-col items-center justify-center">
+                    <div className="absolute bottom-4 md:bottom-12 w-20 md:w-48 h-6 md:h-12 bg-neutral-dark border-t border-primary/30 rounded-[50%] pedestal-shadow transform transition-transform group-hover:scale-110"></div>
+                    <div className="relative z-10 w-24 h-32 md:w-52 md:h-64 transition-all duration-700 group-hover:-translate-y-4 md:group-hover:-translate-y-8 group-hover:rotate-2">
                       <img
                         src={product.image}
                         alt={product.name}
@@ -202,13 +202,13 @@ function PublicCatalog({ onGoToAdmin, settings }: { onGoToAdmin: () => void, set
                       />
                     </div>
                   </div>
-                  <div className="glass-card mt-[-30px] md:mt-[-60px] p-3 md:p-6 rounded-xl md:rounded-2xl relative z-20 text-center mx-1 md:mx-4 flex flex-col h-full justify-between">
+                  <div className="glass-card mt-[-20px] md:mt-[-60px] p-4 md:p-6 rounded-xl md:rounded-2xl relative z-20 text-center mx-1 md:mx-4 flex flex-col h-full justify-between">
                     <div>
-                      <h3 className="text-sm md:text-xl font-bold mb-1 line-clamp-2 md:line-clamp-none leading-tight">{product.name}</h3>
-                      <p className="text-slate-400 text-[10px] md:text-sm mb-2">{product.brand}</p>
+                      <h3 className="text-sm md:text-xl font-bold mb-1 leading-tight">{product.name}</h3>
+                      <p className="text-slate-400 text-xs md:text-sm mb-3">{product.brand}</p>
                     </div>
                     <div>
-                      <p className="text-primary font-bold text-base md:text-2xl mb-3 md:mb-5">RD$ {product.price.toLocaleString()}</p>
+                      <p className="text-primary font-bold text-lg md:text-2xl mb-4 md:mb-5">RD$ {product.price.toLocaleString()}</p>
                       <button
                         onClick={() => addToCart(product)}
                         className={`w-full py-3.5 font-black rounded-xl flex items-center justify-center gap-2 transition-all uppercase text-xs ${cart.find(p => p.id === product.id)
