@@ -273,14 +273,7 @@ function PublicCatalog({ onGoToAdmin, settings }: { onGoToAdmin: () => void, set
       </div>
 
       <AnimatePresence>
-        {showLeadModal && selectedProduct && (
-          <LeadCaptureModal
-            product={selectedProduct}
-            settings={settings}
-            onClose={() => setShowLeadModal(false)}
-            lang={lang}
-          />
-        )}
+
         {showCartModal && (
           <CartModal
             cart={cart}
@@ -1442,68 +1435,7 @@ function CategoryModal({ categories, onClose, onRefresh }: { categories: Categor
   );
 }
 
-function LeadCaptureModal({ product, settings, onClose, lang }: { product: Product, settings: AppSettings | null, onClose: () => void, lang: 'en' | 'es' }) {
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: any) => {
-    e.preventDefault();
-    if (!name || !phone) return;
-    setLoading(true);
-
-    try {
-      // 1. Save Lead
-      await fetch('/api/leads.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, phone, product_name: product.name })
-      });
-
-      // 2. Redirect to WhatsApp
-      const waNumber = settings?.whatsapp_number?.replace(/[^0-9]/g, '') || '';
-      const message = `${t(lang, 'hello_whatsapp')} ${product.name} (RD$ ${product.price})`;
-      window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`, '_blank');
-
-      onClose();
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-background-dark/90 backdrop-blur-sm" />
-      <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="relative bg-neutral-dark border border-neutral-border p-8 rounded-2xl w-full max-w-md shadow-2xl">
-        <button onClick={onClose} className="absolute top-4 right-4 p-2 text-slate-400 hover:text-primary hover:bg-white/5 rounded-full transition-colors">
-          <X className="size-5" />
-        </button>
-        <div className="mb-8">
-          <div className="p-3 bg-primary/20 text-primary w-fit rounded-xl mb-4">
-            <MessageSquare className="size-6" />
-          </div>
-          <h2 className="text-2xl font-bold mb-2">{lang === 'es' ? '¡Ya casi es tuyo!' : 'Almost yours!'}</h2>
-          <p className="text-slate-400 text-sm">{lang === 'es' ? 'Déjanos tu nombre y número para enviarte los detalles de pago y envío por WhatsApp.' : 'Leave us your name and number to send you payment and shipping details via WhatsApp.'}</p>
-        </div>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <label className="flex flex-col gap-2">
-            <span className="text-sm font-semibold text-slate-400">{lang === 'es' ? 'Tu Nombre' : 'Your Name'}</span>
-            <input type="text" required value={name} onChange={e => setName(e.target.value)} className="w-full bg-background-dark border border-neutral-border rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none text-slate-100 placeholder:text-slate-600" placeholder={lang === 'es' ? 'Ej. Juan Pérez' : 'Ex. John Doe'} />
-          </label>
-          <label className="flex flex-col gap-2">
-            <span className="text-sm font-semibold text-slate-400">{lang === 'es' ? 'Tu WhatsApp' : 'Your WhatsApp'}</span>
-            <input type="tel" required value={phone} onChange={e => setPhone(e.target.value)} className="w-full bg-background-dark border border-neutral-border rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none text-slate-100 placeholder:text-slate-600" placeholder={lang === 'es' ? 'Ej. 809-555-5555' : 'Ex. +1 555-555-5555'} />
-          </label>
-          <button type="submit" disabled={loading} className="mt-4 bg-[#25D366] hover:bg-[#25D366]/90 text-background-dark py-3.5 rounded-lg text-sm font-bold w-full transition-transform active:scale-95 shadow-lg shadow-[#25D366]/20 uppercase tracking-widest disabled:opacity-50 flex justify-center items-center gap-2">
-            <MessageSquare className="size-5" /> {lang === 'es' ? 'Continuar al Chat' : 'Continue to Chat'}
-          </button>
-        </form>
-      </motion.div>
-    </div>
-  );
-}
 
 function CartModal({ cart, settings, onClose, onRemove, onClear, lang }: {
   cart: Product[];
@@ -1513,21 +1445,45 @@ function CartModal({ cart, settings, onClose, onRemove, onClear, lang }: {
   onClear: () => void;
   lang: 'en' | 'es';
 }) {
+  const [checkoutStep, setCheckoutStep] = useState<1 | 2>(1);
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [loading, setLoading] = useState(false);
+
   const total = cart.reduce((sum, p) => sum + Number(p.price), 0);
 
-  const handleCheckout = () => {
+  const handleCheckoutSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (cart.length === 0) return;
     const whatsapp = (settings?.whatsapp_number || '').replace(/[^0-9]/g, '');
     if (!whatsapp) { alert('WhatsApp number not configured.'); return; }
 
-    const items = cart.map(p => `• ${p.name} (${p.brand}) — RD$ ${Number(p.price).toLocaleString()}`).join('\n');
-    const msg = lang === 'es'
-      ? `¡Hola! Estoy interesado/a en los siguientes perfumes:\n\n${items}\n\n*Total: RD$ ${total.toLocaleString()}*\n\n¿Me pueden confirmar disponibilidad y opciones de envío?`
-      : `Hello! I'm interested in the following perfumes:\n\n${items}\n\n*Total: RD$ ${total.toLocaleString()}*\n\nCan you confirm availability and shipping options?`;
+    setLoading(true);
 
-    window.open(`https://wa.me/${whatsapp}?text=${encodeURIComponent(msg)}`, '_blank');
-    onClear();
-    onClose();
+    try {
+      // 1. Save Lead with summary of items
+      const productSummary = cart.map(p => p.name).join(', ') + ` (Total: RD$${total})`;
+      await fetch('/api/leads.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone, product_name: productSummary })
+      });
+
+      // 2. Redirect to WhatsApp
+      const items = cart.map(p => `• ${p.name} (${p.brand}) — RD$ ${Number(p.price).toLocaleString()}`).join('\n');
+      const msg = lang === 'es'
+        ? `¡Hola! Soy *${name}*, me interesan los siguientes perfumes:\n\n${items}\n\n*Total: RD$ ${total.toLocaleString()}*\n\n¿Me pueden confirmar disponibilidad y opciones de envío?`
+        : `Hello! I'm *${name}*, interested in the following perfumes:\n\n${items}\n\n*Total: RD$ ${total.toLocaleString()}*\n\nCan you confirm availability and shipping options?`;
+
+      window.open(`https://wa.me/${whatsapp}?text=${encodeURIComponent(msg)}`, '_blank');
+
+      onClear();
+      onClose();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -1539,77 +1495,119 @@ function CartModal({ cart, settings, onClose, onRemove, onClear, lang }: {
         className="bg-neutral-dark border border-neutral-border rounded-2xl w-full max-w-md shadow-2xl overflow-hidden"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-neutral-border">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-neutral-border bg-neutral-dark">
           <div>
-            <h2 className="text-lg font-bold text-slate-100">{lang === 'es' ? 'Perfumes Seleccionados' : 'Selected Perfumes'}</h2>
-            <p className="text-xs text-slate-500 mt-0.5">{lang === 'es' ? 'Escríbenos y te los llevamos hoy mismo' : 'Message us and we\'ll deliver today'}</p>
+            <h2 className="text-lg font-bold text-slate-100">
+              {checkoutStep === 1
+                ? (lang === 'es' ? 'Perfumes Seleccionados' : 'Selected Perfumes')
+                : (lang === 'es' ? '¡Ya casi es tuyo!' : 'Almost yours!')}
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {checkoutStep === 1
+                ? (lang === 'es' ? 'Escríbenos y te los llevamos hoy mismo' : "Message us and we'll deliver today")
+                : (lang === 'es' ? 'Completa tus datos para confirmar el pedido' : 'Fill in your details to confirm the order')}
+            </p>
           </div>
           <button onClick={onClose} className="text-slate-500 hover:text-slate-200 transition-colors p-1">
             <X size={20} />
           </button>
         </div>
 
-        {/* Items */}
-        <div className="px-6 py-4 flex flex-col gap-3 max-h-64 overflow-y-auto">
-          {cart.length === 0 ? (
-            <p className="text-slate-500 text-sm text-center py-6">{lang === 'es' ? 'Tu carrito está vacío' : 'Your cart is empty'}</p>
-          ) : (
-            cart.map(product => (
-              <div key={product.id} className="flex items-center justify-between gap-3 py-2 border-b border-white/5 last:border-0">
-                <div className="flex items-center gap-3">
-                  {/* Product thumbnail */}
-                  <div className="w-12 h-12 rounded-lg bg-background-dark border border-white/10 overflow-hidden flex-shrink-0">
-                    {product.image ? (
-                      <img src={product.image} alt={product.name} className="w-full h-full object-contain p-1" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Package size={16} className="text-slate-600" />
+        {checkoutStep === 1 ? (
+          <>
+            {/* Items */}
+            <div className="px-6 py-4 flex flex-col gap-3 max-h-64 overflow-y-auto bg-neutral-dark">
+              {cart.length === 0 ? (
+                <p className="text-slate-500 text-sm text-center py-6">{lang === 'es' ? 'Tu carrito está vacío' : 'Your cart is empty'}</p>
+              ) : (
+                cart.map(product => (
+                  <div key={product.id} className="flex items-center justify-between gap-3 py-2 border-b border-white/5 last:border-0">
+                    <div className="flex items-center gap-3">
+                      {/* Product thumbnail */}
+                      <div className="w-12 h-12 rounded-lg bg-background-dark border border-white/10 overflow-hidden flex-shrink-0">
+                        {product.image ? (
+                          <img src={product.image} alt={product.name} className="w-full h-full object-contain p-1" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Package size={16} className="text-slate-600" />
+                          </div>
+                        )}
                       </div>
-                    )}
+                      <div>
+                        <p className="text-sm font-semibold text-slate-200">{product.name}</p>
+                        <p className="text-xs text-slate-500">{product.brand}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <span className="text-primary font-bold text-sm">RD$ {Number(product.price).toLocaleString()}</span>
+                      <button onClick={() => onRemove(product.id)} className="text-slate-600 hover:text-red-400 transition-colors">
+                        <X size={14} />
+                      </button>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-200">{product.name}</p>
-                    <p className="text-xs text-slate-500">{product.brand}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 flex-shrink-0">
-                  <span className="text-primary font-bold text-sm">RD$ {Number(product.price).toLocaleString()}</span>
-                  <button onClick={() => onRemove(product.id)} className="text-slate-600 hover:text-red-400 transition-colors">
-                    <X size={14} />
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Benefits */}
-        <div className="px-6 py-4 bg-background-dark/50 text-xs text-slate-400 flex flex-col gap-2 border-t border-neutral-border">
-          <div className="flex items-center gap-2"><span>🚚</span> {lang === 'es' ? 'Envío gratis a domicilio' : 'Free home delivery'}</div>
-          <div className="flex items-center gap-2"><span>💵</span> {lang === 'es' ? 'Pago contra entrega' : 'Cash on delivery'}</div>
-          <div className="flex items-center gap-2"><span>✅</span> {lang === 'es' ? 'Garantía de devolución' : 'Money back guarantee'}</div>
-        </div>
-
-        {/* Total + Actions */}
-        <div className="px-6 py-5 border-t border-neutral-border flex flex-col gap-3">
-          {cart.length > 0 && (
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-slate-400 font-semibold">Total</span>
-              <span className="text-primary font-black text-lg">RD$ {total.toLocaleString()}</span>
+                ))
+              )}
             </div>
-          )}
-          <button onClick={onClear} className="text-sm text-slate-500 hover:text-red-400 transition-colors underline text-center">
-            {lang === 'es' ? 'Vaciar selección' : 'Clear selection'}
-          </button>
-          <button
-            onClick={handleCheckout}
-            disabled={cart.length === 0}
-            className="w-full py-4 bg-[#25D366] hover:bg-[#25D366]/90 text-white font-black rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-[#25D366]/20 disabled:opacity-40 disabled:cursor-not-allowed text-sm uppercase tracking-widest"
-          >
-            <MessageSquare size={18} />
-            {lang === 'es' ? 'Continuar con el pedido 💬' : 'Continue to Order 💬'}
-          </button>
-        </div>
+
+            {/* Benefits */}
+            <div className="px-6 py-4 bg-background-dark/50 text-xs text-slate-400 flex flex-col gap-2 border-t border-neutral-border">
+              <div className="flex items-center gap-2"><span>🚚</span> {lang === 'es' ? 'Envío gratis a domicilio' : 'Free home delivery'}</div>
+              <div className="flex items-center gap-2"><span>💵</span> {lang === 'es' ? 'Pago contra entrega' : 'Cash on delivery'}</div>
+              <div className="flex items-center gap-2"><span>✅</span> {lang === 'es' ? 'Garantía de devolución' : 'Money back guarantee'}</div>
+            </div>
+
+            {/* Total + Actions */}
+            <div className="px-6 py-5 border-t border-neutral-border flex flex-col gap-3 bg-neutral-dark">
+              {cart.length > 0 && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-slate-400 font-semibold">Total</span>
+                  <span className="text-primary font-black text-lg">RD$ {total.toLocaleString()}</span>
+                </div>
+              )}
+              <button onClick={onClear} className="text-sm text-slate-500 hover:text-red-400 transition-colors underline text-center">
+                {lang === 'es' ? 'Vaciar selección' : 'Clear selection'}
+              </button>
+              <button
+                onClick={() => setCheckoutStep(2)}
+                disabled={cart.length === 0}
+                className="w-full py-4 bg-primary hover:bg-primary/90 text-background-dark font-black rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed text-sm uppercase tracking-widest mt-2"
+              >
+                {lang === 'es' ? 'Procesar Orden' : 'Process Order'} <ArrowRight size={18} />
+              </button>
+            </div>
+          </>
+        ) : (
+          /* Step 2: Lead Capture Form */
+          <div className="p-6 bg-neutral-dark flex flex-col gap-6">
+            <div className="flex justify-between items-end border-b border-white/5 pb-4">
+              <div>
+                <p className="text-slate-500 text-xs font-semibold uppercase">{lang === 'es' ? 'Total a Pagar' : 'Total to Pay'}</p>
+                <p className="text-primary font-black text-2xl">RD$ {total.toLocaleString()}</p>
+              </div>
+              <p className="text-slate-400 text-xs">{cart.length} {lang === 'es' ? 'artículos' : 'items'}</p>
+            </div>
+
+            <form onSubmit={handleCheckoutSubmit} className="flex flex-col gap-4">
+              <label className="flex flex-col gap-2">
+                <span className="text-sm font-semibold text-slate-400">{lang === 'es' ? 'Tu Nombre' : 'Your Name'}</span>
+                <input type="text" required value={name} onChange={e => setName(e.target.value)} className="w-full bg-background-dark border border-neutral-border rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none text-slate-100 placeholder:text-slate-600" placeholder={lang === 'es' ? 'Ej. Juan Pérez' : 'Ex. John Doe'} />
+              </label>
+              <label className="flex flex-col gap-2">
+                <span className="text-sm font-semibold text-slate-400">{lang === 'es' ? 'Tu WhatsApp' : 'Your WhatsApp'}</span>
+                <input type="tel" required value={phone} onChange={e => setPhone(e.target.value)} className="w-full bg-background-dark border border-neutral-border rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none text-slate-100 placeholder:text-slate-600" placeholder={lang === 'es' ? 'Ej. 809-555-5555' : 'Ex. +1 555-555-5555'} />
+              </label>
+
+              <div className="flex gap-3 mt-4">
+                <button type="button" onClick={() => setCheckoutStep(1)} className="px-4 py-3.5 rounded-lg text-slate-400 hover:bg-white/5 transition-colors font-semibold text-sm">
+                  {lang === 'es' ? 'Volver' : 'Back'}
+                </button>
+                <button type="submit" disabled={loading} className="flex-1 bg-[#25D366] hover:bg-[#25D366]/90 text-background-dark py-3.5 rounded-lg text-sm font-bold transition-transform active:scale-95 shadow-lg shadow-[#25D366]/20 uppercase tracking-widest disabled:opacity-50 flex justify-center items-center gap-2">
+                  <MessageSquare className="size-5" /> {lang === 'es' ? 'Enviar y Chatear' : 'Send & Chat'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
       </motion.div>
     </div>
   );
