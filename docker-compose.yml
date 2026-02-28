@@ -23,9 +23,6 @@ services:
       - DB_PASS=Gucci1826
     networks:
       - internal
-      - dokploy-network
 
 networks:
   internal:
-  dokploy-network:
-    external: true

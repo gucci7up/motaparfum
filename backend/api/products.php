@@ -28,8 +28,7 @@ switch ($method) {
     case 'PUT':
     case 'DELETE':
         // Protected methods require Bearer token
-        $headers = apache_request_headers();
-        $authHeader = isset($headers['Authorization']) ? $headers['Authorization'] : '';
+        $authHeader = isset($_SERVER['HTTP_AUTHORIZATION']) ? $_SERVER['HTTP_AUTHORIZATION'] : '';
 
         if (!preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
             http_response_code(401);
