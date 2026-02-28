@@ -1,19 +1,19 @@
 import { ReactNode, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  LayoutDashboard, 
-  Package, 
-  ShoppingCart, 
-  MessageSquare, 
-  Settings, 
-  Search, 
-  PlusCircle, 
-  Bell, 
-  Filter, 
-  Download, 
-  Edit2, 
-  Trash2, 
-  ChevronLeft, 
+import {
+  LayoutDashboard,
+  Package,
+  ShoppingCart,
+  MessageSquare,
+  Settings,
+  Search,
+  PlusCircle,
+  Bell,
+  Filter,
+  Download,
+  Edit2,
+  Trash2,
+  ChevronLeft,
   ChevronRight,
   Star,
   TrendingUp,
@@ -30,15 +30,22 @@ import {
 import { Product, Stat } from './types';
 
 export default function App() {
-  const [view, setView] = useState<'catalog' | 'admin'>('catalog');
+  const [view, setView] = useState<'catalog' | 'login' | 'admin'>('catalog');
 
   return (
     <div className="min-h-screen bg-background-dark text-slate-100 selection:bg-primary/30">
       <AnimatePresence mode="wait">
-        {view === 'catalog' ? (
-          <PublicCatalog onGoToAdmin={() => setView('admin')} />
-        ) : (
-          <DashboardScreen onGoToCatalog={() => setView('catalog')} />
+        {view === 'catalog' && (
+          <PublicCatalog key="catalog" onGoToAdmin={() => setView('login')} />
+        )}
+        {view === 'login' && (
+          <LoginScreen key="login" onLoginSuccess={() => setView('admin')} onGoToCatalog={() => setView('catalog')} />
+        )}
+        {view === 'admin' && (
+          <DashboardScreen key="admin" onGoToCatalog={() => setView('catalog')} onLogout={() => {
+            localStorage.removeItem('admin_token');
+            setView('login');
+          }} />
         )}
       </AnimatePresence>
     </div>
@@ -56,7 +63,7 @@ function PublicCatalog({ onGoToAdmin }: { onGoToAdmin: () => void }) {
   }, []);
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -83,7 +90,7 @@ function PublicCatalog({ onGoToAdmin }: { onGoToAdmin: () => void }) {
             <ShoppingBag className="size-5" />
             <span className="absolute top-0 right-0 w-2 h-2 bg-primary rounded-full"></span>
           </button>
-          <button 
+          <button
             onClick={onGoToAdmin}
             className="glass-card p-2.5 rounded-full hover:bg-white/10 transition-colors"
             title="Admin Panel"
@@ -97,9 +104,9 @@ function PublicCatalog({ onGoToAdmin }: { onGoToAdmin: () => void }) {
       <div className="fixed top-[72px] left-0 right-0 z-50 overflow-x-auto bg-background-dark/40 backdrop-blur-sm border-b border-white/5 py-3 no-scrollbar">
         <div className="flex items-center justify-center gap-4 md:gap-8 px-4 min-w-max mx-auto">
           {['Hombres', 'Mujeres', 'Unisex'].map((cat) => (
-            <a 
+            <a
               key={cat}
-              className="flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 hover:border-primary/50 hover:text-primary transition-all text-sm font-semibold uppercase tracking-wider" 
+              className="flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 hover:border-primary/50 hover:text-primary transition-all text-sm font-semibold uppercase tracking-wider"
               href={`#${cat.toLowerCase()}`}
             >
               {cat === 'Hombres' && <User className="size-4" />}
@@ -129,9 +136,9 @@ function PublicCatalog({ onGoToAdmin }: { onGoToAdmin: () => void }) {
                   <div className="relative aspect-[4/5] flex flex-col items-center justify-center">
                     <div className="absolute bottom-12 w-48 h-12 bg-neutral-dark border-t border-primary/30 rounded-[50%] pedestal-shadow transform transition-transform group-hover:scale-110"></div>
                     <div className="relative z-10 w-52 h-64 transition-all duration-700 group-hover:-translate-y-8 group-hover:rotate-2">
-                      <img 
-                        src={product.image} 
-                        alt={product.name} 
+                      <img
+                        src={product.image}
+                        alt={product.name}
                         className="w-full h-full object-cover rounded-lg drop-shadow-2xl"
                         referrerPolicy="no-referrer"
                       />
@@ -206,7 +213,7 @@ function PublicCatalog({ onGoToAdmin }: { onGoToAdmin: () => void }) {
   );
 }
 
-function DashboardScreen({ onGoToCatalog }: { onGoToCatalog: () => void }) {
+function DashboardScreen({ onGoToCatalog, onLogout }: { onGoToCatalog: () => void, onLogout: () => void }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [stats, setStats] = useState<Stat[]>([]);
 
@@ -228,9 +235,19 @@ function DashboardScreen({ onGoToCatalog }: { onGoToCatalog: () => void }) {
 
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this product?')) {
+      const token = localStorage.getItem('admin_token');
       try {
-        await fetch(`/api/products.php?id=${id}`, { method: 'DELETE' });
-        fetchData();
+        const res = await fetch(`/api/products.php?id=${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
+          fetchData();
+        } else {
+          console.error('Failed to delete', await res.text());
+        }
       } catch (err) {
         console.error('Error deleting:', err);
       }
@@ -238,7 +255,7 @@ function DashboardScreen({ onGoToCatalog }: { onGoToCatalog: () => void }) {
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -262,15 +279,24 @@ function DashboardScreen({ onGoToCatalog }: { onGoToCatalog: () => void }) {
             <SidebarLink icon={<Package size={20} />} label="Products" active />
             <SidebarLink icon={<ShoppingCart size={20} />} label="Orders" />
             <SidebarLink icon={<MessageSquare size={20} />} label="WhatsApp Leads" />
-            
-            <div className="mt-auto">
+
+            <div className="mt-auto flex flex-col gap-2">
               <SidebarLink icon={<Settings size={20} />} label="Settings" />
-              <button 
+              <button
                 onClick={onGoToCatalog}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-primary/10 hover:text-primary transition-colors"
+                title="Public Catalog"
               >
                 <ShoppingBag size={20} />
-                <span className="text-sm font-semibold tracking-wide">Public Catalog</span>
+                <span className="text-sm font-semibold tracking-wide">Catalog</span>
+              </button>
+              <button
+                onClick={onLogout}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:bg-red-500/10 hover:text-red-500 transition-colors"
+                title="Logout"
+              >
+                <ChevronLeft size={20} />
+                <span className="text-sm font-semibold tracking-wide">Logout</span>
               </button>
             </div>
           </nav>
@@ -284,8 +310,8 @@ function DashboardScreen({ onGoToCatalog }: { onGoToCatalog: () => void }) {
             <h2 className="text-xl font-bold text-slate-100">Inventory Management</h2>
             <div className="relative w-72">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 size-5" />
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="Search perfume catalog..."
                 className="w-full bg-neutral-dark border-none rounded-lg pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none text-slate-100"
               />
@@ -303,9 +329,9 @@ function DashboardScreen({ onGoToCatalog }: { onGoToCatalog: () => void }) {
             </button>
             <div className="flex items-center gap-3 ml-2 cursor-pointer">
               <div className="w-10 h-10 rounded-full bg-neutral-border flex items-center justify-center overflow-hidden border border-primary/20">
-                <img 
-                  className="w-full h-full object-cover" 
-                  src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=100&h=100" 
+                <img
+                  className="w-full h-full object-cover"
+                  src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=100&h=100"
                   alt="Admin"
                   referrerPolicy="no-referrer"
                 />
@@ -354,7 +380,7 @@ function DashboardScreen({ onGoToCatalog }: { onGoToCatalog: () => void }) {
                   {products.map((product) => (
                     <tr key={product.id} className="hover:bg-primary/5 transition-colors group">
                       <td className="px-8 py-5">
-                        <div 
+                        <div
                           className="w-14 h-14 rounded-lg bg-neutral-border bg-center bg-no-repeat bg-cover border border-primary/10 overflow-hidden"
                           style={{ backgroundImage: `url(${product.image})` }}
                         />
@@ -428,15 +454,14 @@ function DashboardScreen({ onGoToCatalog }: { onGoToCatalog: () => void }) {
   );
 }
 
-function SidebarLink({ icon, label, active = false }: { icon: ReactNode, label: string, active?: boolean }) {
+function SidebarLink({ icon, label, active = false }: { icon: any, label: string, active?: boolean }) {
   return (
-    <a 
-      href="#" 
-      className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-        active 
-          ? 'bg-primary/20 text-primary border border-primary/20' 
-          : 'text-slate-400 hover:bg-primary/10 hover:text-primary'
-      }`}
+    <a
+      href="#"
+      className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${active
+        ? 'bg-primary/20 text-primary border border-primary/20'
+        : 'text-slate-400 hover:bg-primary/10 hover:text-primary'
+        }`}
     >
       {icon}
       <span className="text-sm font-semibold tracking-wide">{label}</span>
@@ -453,17 +478,143 @@ function StatCard({ stat }: { stat: Stat; key?: number }) {
   }[stat.icon as any] || TrendingUp;
 
   return (
-    <div className="bg-neutral-dark p-6 rounded-xl border border-neutral-border hover:border-primary/30 transition-colors group">
-      <div className="flex justify-between items-start mb-4">
-        <span className="text-slate-400 text-sm font-medium">{stat.label}</span>
-        <Icon className="text-primary group-hover:scale-110 transition-transform" size={20} />
+    <div className="glass-card p-6 rounded-2xl border border-white/5 relative overflow-hidden group">
+      <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl -mr-16 -mt-16 group-hover:bg-primary/10 transition-colors"></div>
+
+      <div className="flex justify-between items-start mb-4 relative z-10">
+        <div>
+          <p className="text-slate-400 text-sm font-medium mb-1">{stat.label}</p>
+          <h3 className="text-3xl font-bold font-display tracking-tight">{stat.value}</h3>
+        </div>
+        <div className="p-3 bg-primary/10 rounded-xl text-primary border border-primary/20">
+          <Icon size={24} />
+        </div>
       </div>
-      <div className="flex items-end gap-3">
-        <h3 className="text-3xl font-extrabold text-slate-100">{stat.value}</h3>
-        <span className={`text-sm font-bold mb-1 flex items-center ${stat.trend === 'up' ? 'text-emerald-500' : 'text-red-500'}`}>
-          <TrendingUp size={14} className="mr-1" /> {stat.change}
+
+      <div className="flex items-center gap-2 text-sm relative z-10">
+        <span className={`flex items-center gap-1 font-semibold ${stat.trend === 'up' ? 'text-green-400' : 'text-red-400'}`}>
+          <TrendingUp size={16} className={stat.trend === 'down' ? 'rotate-180' : ''} />
+          {stat.change_value}
         </span>
+        <span className="text-slate-500">vs last month</span>
       </div>
     </div>
+  );
+}
+
+function LoginScreen({ onLoginSuccess, onGoToCatalog }: { onLoginSuccess: () => void, onGoToCatalog: () => void }) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/auth.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username, password })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        localStorage.setItem('admin_token', data.token);
+        onLoginSuccess();
+      } else {
+        setError(data.error || 'Invalid credentials');
+      }
+    } catch (err) {
+      setError('An error occurred during login.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="min-h-screen flex items-center justify-center bg-background-dark mesh-gradient"
+    >
+      <div className="absolute top-8 left-8">
+        <button
+          onClick={onGoToCatalog}
+          className="glass-card p-3 rounded-full hover:bg-white/10 transition-colors"
+          title="Back to Catalog"
+        >
+          <ChevronLeft className="size-6" />
+        </button>
+      </div>
+
+      <div className="glass-card p-8 rounded-3xl w-full max-w-md shadow-2xl border border-white/10 mx-4 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-3xl -mr-16 -mt-16"></div>
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-primary/20 rounded-full blur-3xl -ml-16 -mb-16"></div>
+
+        <div className="relative z-10">
+          <div className="flex flex-col items-center mb-8">
+            <div className="p-4 bg-primary/20 rounded-2xl text-primary mb-4 ring-1 ring-primary/30">
+              <Diamond className="size-8 font-bold" />
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight uppercase">Admin <span className="text-primary">Terminal</span></h1>
+            <p className="text-slate-400 text-sm mt-2 text-center">Enter your credentials to manage the store</p>
+          </div>
+
+          {error && (
+            <div className="bg-red-500/20 text-red-200 p-4 rounded-xl text-sm mb-6 border border-red-500/30 text-center">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} className="flex flex-col gap-4">
+            <div>
+              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 block pl-1">Username</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={username}
+                  onChange={e => setUsername(e.target.value)}
+                  className="w-full bg-neutral-dark/80 border border-white/10 rounded-xl px-4 py-3 pl-11 text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all"
+                  placeholder="admin"
+                  required
+                />
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-slate-500" />
+              </div>
+            </div>
+
+            <div className="mb-2">
+              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 block pl-1">Password</label>
+              <div className="relative">
+                <input
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  className="w-full bg-neutral-dark/80 border border-white/10 rounded-xl px-4 py-3 pl-11 text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all"
+                  placeholder="••••••••"
+                  required
+                />
+                <Settings className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-slate-500" />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-4 mt-2 bg-primary text-background-dark font-black rounded-xl flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(242,185,13,0.4)] transition-all uppercase text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
+            >
+              {loading ? 'Authenticating...' : 'Secure Login'}
+              {!loading && <ArrowRight className="size-4" />}
+            </button>
+          </form>
+        </div>
+      </div>
+    </motion.div>
   );
 }

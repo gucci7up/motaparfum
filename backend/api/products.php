@@ -25,80 +25,101 @@ switch ($method) {
         break;
 
     case 'POST':
-        $data = json_decode(file_get_contents('php://input'), true);
-        if (!$data) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Invalid JSON']);
-            break;
-        }
-
-        $id = uniqid();
-        $sql = "INSERT INTO products (id, name, sku, category, price, status, image, gender, brand) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        try {
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([
-                $id,
-                $data['name'],
-                $data['sku'],
-                $data['category'],
-                $data['price'],
-                $data['status'],
-                $data['image'],
-                $data['gender'],
-                $data['brand']
-            ]);
-            http_response_code(201);
-            echo json_encode(['id' => $id, 'message' => 'Product created']);
-        } catch (PDOException $e) {
-            http_response_code(500);
-            echo json_encode(['error' => $e->getMessage()]);
-        }
-        break;
-
     case 'PUT':
-        $data = json_decode(file_get_contents('php://input'), true);
-        if (!$data || !isset($_GET['id'])) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Invalid JSON or missing ID']);
-            break;
-        }
-
-        $sql = "UPDATE products SET name=?, sku=?, category=?, price=?, status=?, image=?, gender=?, brand=? WHERE id=?";
-        try {
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([
-                $data['name'],
-                $data['sku'],
-                $data['category'],
-                $data['price'],
-                $data['status'],
-                $data['image'],
-                $data['gender'],
-                $data['brand'],
-                $_GET['id']
-            ]);
-            echo json_encode(['message' => 'Product updated']);
-        } catch (PDOException $e) {
-            http_response_code(500);
-            echo json_encode(['error' => $e->getMessage()]);
-        }
-        break;
-
     case 'DELETE':
-        if (!isset($_GET['id'])) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Missing ID']);
-            break;
+        // Protected methods require Bearer token
+        $headers = apache_request_headers();
+        $authHeader = isset($headers['Authorization']) ? $headers['Authorization'] : '';
+
+        if (!preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Unauthorized - Token missing']);
+            exit;
         }
 
-        try {
-            $stmt = $pdo->prepare('DELETE FROM products WHERE id = ?');
-            $stmt->execute([$_GET['id']]);
-            echo json_encode(['message' => 'Product deleted']);
-        } catch (PDOException $e) {
-            http_response_code(500);
-            echo json_encode(['error' => $e->getMessage()]);
+        $token = $matches[1];
+
+        // Verify token against database
+        $stmt = $pdo->prepare('SELECT id FROM admins WHERE token = ?');
+        $stmt->execute([$token]);
+        if (!$stmt->fetch()) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Unauthorized - Invalid token']);
+            exit;
+        }
+
+        if ($method === 'POST') {
+            $data = json_decode(file_get_contents('php://input'), true);
+            if (!$data) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Invalid JSON']);
+                break;
+            }
+
+            $id = uniqid();
+            $sql = "INSERT INTO products (id, name, sku, category, price, status, image, gender, brand) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            try {
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([
+                    $id,
+                    $data['name'],
+                    $data['sku'],
+                    $data['category'],
+                    $data['price'],
+                    $data['status'],
+                    $data['image'],
+                    $data['gender'],
+                    $data['brand']
+                ]);
+                http_response_code(201);
+                echo json_encode(['id' => $id, 'message' => 'Product created']);
+            } catch (PDOException $e) {
+                http_response_code(500);
+                echo json_encode(['error' => $e->getMessage()]);
+            }
+        } elseif ($method === 'PUT') {
+            $data = json_decode(file_get_contents('php://input'), true);
+            if (!$data || !isset($_GET['id'])) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Invalid JSON or missing ID']);
+                break;
+            }
+
+            $sql = "UPDATE products SET name=?, sku=?, category=?, price=?, status=?, image=?, gender=?, brand=? WHERE id=?";
+            try {
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([
+                    $data['name'],
+                    $data['sku'],
+                    $data['category'],
+                    $data['price'],
+                    $data['status'],
+                    $data['image'],
+                    $data['gender'],
+                    $data['brand'],
+                    $_GET['id']
+                ]);
+                echo json_encode(['message' => 'Product updated']);
+            } catch (PDOException $e) {
+                http_response_code(500);
+                echo json_encode(['error' => $e->getMessage()]);
+            }
+        } elseif ($method === 'DELETE') {
+            if (!isset($_GET['id'])) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Missing ID']);
+                break;
+            }
+
+            try {
+                $stmt = $pdo->prepare('DELETE FROM products WHERE id = ?');
+                $stmt->execute([$_GET['id']]);
+                echo json_encode(['message' => 'Product deleted']);
+            } catch (PDOException $e) {
+                http_response_code(500);
+                echo json_encode(['error' => $e->getMessage()]);
+            }
         }
         break;
 

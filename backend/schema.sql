@@ -30,6 +30,16 @@ CREATE TABLE IF NOT EXISTS `stats` (
   UNIQUE KEY `stat_key` (`stat_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS `admins` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `username` varchar(100) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `token` varchar(64) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `username` (`username`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Insert mock data
 INSERT INTO `products` (`id`, `name`, `sku`, `category`, `price`, `status`, `image`, `gender`, `brand`) VALUES
 ('1', 'Royal Oud Premium', 'RD-RO-001', 'Woody Exotic', 14500.00, 'In Stock', 'https://images.unsplash.com/photo-1541643600914-78b084683601?auto=format&fit=crop&q=80&w=400&h=500', 'Hombres', 'Essenze di Roma'),
@@ -46,3 +56,8 @@ INSERT INTO `stats` (`stat_key`, `label`, `value`, `change_value`, `icon`, `tren
 ('whatsapp_leads', 'WhatsApp Leads', '156', '8%', 'message-square', 'up'),
 ('revenue_growth', 'Revenue Growth', '$12.5k', '18%', 'dollar-sign', 'up')
 ON DUPLICATE KEY UPDATE value=VALUES(value);
+
+-- Default admin user: admin / admin123
+INSERT INTO `admins` (`username`, `password`) VALUES
+('admin', '$2y$10$wT0rX1Z1g6R1Q4Q6H8Q4H.M2w.y1K1w.p1Q1R1R1R1R1R1R1R1R1R')
+ON DUPLICATE KEY UPDATE id=id;

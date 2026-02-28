@@ -13,7 +13,8 @@ export interface Product {
 export interface Stat {
   label: string;
   value: string;
-  change: string;
+  change?: string;
+  change_value?: string;
   icon: string;
   trend: 'up' | 'down';
 }
