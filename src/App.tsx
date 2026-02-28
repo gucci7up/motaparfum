@@ -727,7 +727,18 @@ function SettingsTab({ onRefresh, settings }: { onRefresh: () => void, settings:
     primary_color: '#F2B90D',
   });
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const handleLogoChange = (e: any) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setLogoPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
 
   const handleSave = async () => {
     setLoading(true);
@@ -751,12 +762,12 @@ function SettingsTab({ onRefresh, settings }: { onRefresh: () => void, settings:
         },
         body: data
       });
-      if (res.ok) {
+      const json = await res.json();
+      if (res.ok && json.success) {
         alert('Settings saved successfully! Refreshing...');
-        // Refresh page to apply new CSS token to root config easily
         window.location.reload();
       } else {
-        alert('Failed to save settings.');
+        setSaveError(json.error || 'Failed to save settings.');
       }
     } catch (err) {
       console.error(err);
@@ -811,17 +822,47 @@ function SettingsTab({ onRefresh, settings }: { onRefresh: () => void, settings:
           </div>
         </label>
 
-        <label className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
           <span className="text-sm font-semibold text-slate-400">Store Logo</span>
-          {settings?.store_logo && (
-            <div className="mb-2 p-2 bg-background-dark border border-neutral-border rounded-lg inline-block w-max">
-              <img src={settings.store_logo} alt="Current Logo" className="h-12 w-auto object-contain" />
-            </div>
-          )}
-          <input type="file" accept="image/*" onChange={e => setLogoFile(e.target.files?.[0] || null)} className="w-full bg-background-dark border border-neutral-border rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none text-slate-100 transition-shadow file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-primary file:text-background-dark hover:file:bg-primary/90" />
-        </label>
 
-        <button onClick={handleSave} disabled={loading} className="mt-4 bg-primary hover:bg-primary/90 text-background-dark py-3.5 rounded-lg text-sm font-bold w-full transition-transform active:scale-95 shadow-lg shadow-primary/20 uppercase tracking-widest disabled:opacity-50">
+          {/* Logo Preview Area */}
+          <div className="flex items-center gap-4 p-4 bg-background-dark border border-neutral-border rounded-xl">
+            <div className="w-24 h-16 rounded-lg border border-dashed border-neutral-border flex items-center justify-center bg-neutral-dark overflow-hidden flex-shrink-0">
+              {logoPreview ? (
+                <img src={logoPreview} alt="New logo preview" className="w-full h-full object-contain" />
+              ) : settings?.store_logo ? (
+                <img src={settings.store_logo} alt="Current logo" className="w-full h-full object-contain" />
+              ) : (
+                <Diamond className="size-6 text-slate-600" />
+              )}
+            </div>
+            <div className="flex flex-col gap-1">
+              <p className="text-sm font-semibold text-slate-300">
+                {logoPreview ? 'New logo selected ✓' : settings?.store_logo ? 'Current logo' : 'No logo set'}
+              </p>
+              <p className="text-xs text-slate-500">PNG, JPG, SVG, WebP — recommended 200x60px</p>
+            </div>
+          </div>
+
+          {/* File Upload */}
+          <input type="file" accept="image/*" onChange={handleLogoChange} className="w-full bg-background-dark border border-neutral-border rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none text-slate-100 transition-shadow file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-primary file:text-background-dark hover:file:bg-primary/90" />
+
+          {/* URL Fallback */}
+          <div className="flex items-center gap-2">
+            <div className="flex-1 h-px bg-neutral-border"></div>
+            <span className="text-xs text-slate-600 uppercase tracking-widest">or paste URL</span>
+            <div className="flex-1 h-px bg-neutral-border"></div>
+          </div>
+          <input type="url" placeholder="https://example.com/logo.png" value={formData.store_logo || ''} onChange={e => { setFormData({ ...formData, store_logo: e.target.value }); setLogoPreview(e.target.value); }} className="w-full bg-background-dark border border-neutral-border rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none text-slate-100 transition-shadow placeholder:text-slate-600" />
+        </div>
+
+        {saveError && (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 text-sm text-red-400 break-all">
+            <span className="font-bold">Error:</span> {saveError}
+          </div>
+        )}
+
+        <button onClick={handleSave} disabled={loading} className="mt-2 bg-primary hover:bg-primary/90 text-background-dark py-3.5 rounded-lg text-sm font-bold w-full transition-transform active:scale-95 shadow-lg shadow-primary/20 uppercase tracking-widest disabled:opacity-50">
           {loading ? 'Saving...' : 'Save Changes'}
         </button>
 
