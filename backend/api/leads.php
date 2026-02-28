@@ -4,7 +4,24 @@ require_once 'db.php';
 header('Content-Type: application/json');
 
 $method = $_SERVER['REQUEST_METHOD'];
-$authHeader = isset($_SERVER['HTTP_AUTHORIZATION']) ? $_SERVER['HTTP_AUTHORIZATION'] : '';
+
+// Robust auth header extraction (works on Apache, Nginx, CGI)
+$authHeader = '';
+if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+    $authHeader = $_SERVER['HTTP_AUTHORIZATION'];
+} elseif (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+    $authHeader = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+} elseif (function_exists('getallheaders')) {
+    $headers = getallheaders();
+    foreach ($headers as $k => $v) {
+        if (strtolower($k) === 'authorization') {
+            $authHeader = $v;
+            break;
+        }
+    }
+} elseif (isset($_SERVER['Authorization'])) {
+    $authHeader = $_SERVER['Authorization'];
+}
 
 // Function to check if the user is an admin
 function isAdmin()

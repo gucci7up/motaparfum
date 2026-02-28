@@ -29,11 +29,28 @@ if ($method === 'GET') {
         echo json_encode(['error' => $e->getMessage()]);
     }
 } elseif ($method === 'POST') {
-    $authHeader = isset($_SERVER['HTTP_AUTHORIZATION']) ? $_SERVER['HTTP_AUTHORIZATION'] : '';
+    // Get Authorization header using multiple fallback methods
+    // This is needed because Apache/Nginx sometimes strip the header before PHP sees it
+    $authHeader = '';
+    if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+        $authHeader = $_SERVER['HTTP_AUTHORIZATION'];
+    } elseif (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+        $authHeader = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+    } elseif (function_exists('getallheaders')) {
+        $headers = getallheaders();
+        foreach ($headers as $k => $v) {
+            if (strtolower($k) === 'authorization') {
+                $authHeader = $v;
+                break;
+            }
+        }
+    } elseif (isset($_SERVER['Authorization'])) {
+        $authHeader = $_SERVER['Authorization'];
+    }
 
     if (!preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
         http_response_code(401);
-        echo json_encode(['error' => 'Unauthorized']);
+        echo json_encode(['error' => 'Unauthorized – no auth header found.']);
         exit;
     }
 
@@ -42,7 +59,7 @@ if ($method === 'GET') {
     $stmt->execute([$token]);
     if (!$stmt->fetch()) {
         http_response_code(401);
-        echo json_encode(['error' => 'Unauthorized']);
+        echo json_encode(['error' => 'Unauthorized – invalid token.']);
         exit;
     }
 
