@@ -99,7 +99,7 @@ function PublicCatalog({ onGoToAdmin, settings }: { onGoToAdmin: () => void, set
       <nav className="fixed top-0 left-0 right-0 z-[60] px-4 md:px-8 py-4 flex items-center justify-between bg-background-dark/80 backdrop-blur-md border-b border-white/5">
         <div className="flex items-center gap-3">
           {settings?.store_logo ? (
-            <img src={settings.store_logo} alt={settings?.store_name || 'Logo'} className="h-10 w-auto object-contain" />
+            <img src={settings.store_logo} alt={settings?.store_name || 'Logo'} className="h-14 w-auto object-contain max-w-[180px]" />
           ) : (
             <>
               <div className="p-2 bg-primary rounded-lg text-background-dark">
@@ -209,7 +209,7 @@ function PublicCatalog({ onGoToAdmin, settings }: { onGoToAdmin: () => void, set
           <div className="flex flex-col items-center gap-6">
             <div className="flex items-center gap-3">
               {settings?.store_logo ? (
-                <img src={settings.store_logo} alt={settings?.store_name || 'Logo'} className="h-12 w-auto object-contain" />
+                <img src={settings.store_logo} alt={settings?.store_name || 'Logo'} className="h-16 w-auto object-contain max-w-[220px]" />
               ) : (
                 <>
                   <div className="p-2 bg-primary/20 rounded-lg text-primary">
@@ -328,7 +328,7 @@ function DashboardScreen({ onGoToCatalog, onLogout, settings }: { onGoToCatalog:
         <div className="p-6 flex flex-col gap-8 h-full">
           <div className="flex items-center gap-3">
             {settings?.store_logo ? (
-              <img src={settings.store_logo} alt={settings?.store_name || 'Logo'} className="h-10 w-auto object-contain" />
+              <img src={settings.store_logo} alt={settings?.store_name || 'Logo'} className="h-14 w-auto object-contain max-w-[160px]" />
             ) : (
               <>
                 <div className="bg-primary rounded-lg p-2 text-background-dark">
