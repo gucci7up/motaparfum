@@ -353,7 +353,7 @@ function DashboardScreen({ onGoToCatalog, onLogout }: { onGoToCatalog: () => voi
           {activeTab === 'products' && <ProductsTab products={products} categories={categories} onDelete={handleDelete} onRefresh={fetchData} />}
           {activeTab === 'orders' && <OrdersTab />}
           {activeTab === 'leads' && <LeadsTab />}
-          {activeTab === 'settings' && <SettingsTab />}
+          {activeTab === 'settings' && <SettingsTab onRefresh={fetchData} />}
         </div>
 
         <footer className="flex items-center justify-between text-[10px] text-slate-500 uppercase tracking-widest font-bold border-t border-neutral-border pt-6 pb-10">
@@ -516,11 +516,7 @@ function ProductsTab({ products, categories, onDelete, onRefresh }: { products: 
 }
 
 function OrdersTab() {
-  const mockOrders = [
-    { id: 'ORD-001', customer: 'Carlos Perez', date: 'Oct 24, 2023', total: 14500, status: 'Delivered' },
-    { id: 'ORD-002', customer: 'Maria Leon', date: 'Oct 25, 2023', total: 8900, status: 'Processing' },
-    { id: 'ORD-003', customer: 'Jose Martinez', date: 'Oct 26, 2023', total: 12000, status: 'Pending' },
-  ];
+  const mockOrders: any[] = [];
   return (
     <div className="bg-neutral-dark rounded-xl border border-neutral-border overflow-hidden shadow-xl">
       <div className="px-8 py-6 border-b border-neutral-border flex justify-between items-center bg-neutral-dark/50">
@@ -541,6 +537,11 @@ function OrdersTab() {
           </tr>
         </thead>
         <tbody className="divide-y divide-neutral-border">
+          {mockOrders.length === 0 && (
+            <tr>
+              <td colSpan={5} className="px-8 py-8 text-center text-slate-500">No orders found yet</td>
+            </tr>
+          )}
           {mockOrders.map(o => (
             <tr key={o.id} className="hover:bg-primary/5 transition-colors">
               <td className="px-8 py-5 font-bold text-slate-300">{o.id}</td>
@@ -559,46 +560,67 @@ function OrdersTab() {
 }
 
 function LeadsTab() {
-  const mockLeads = [
-    { id: '1', name: 'Laura Sanchez', number: '+1 809-555-0100', status: 'Hot', product: 'Creed Aventus', time: '10 mins ago' },
-    { id: '2', name: 'Miguel Angel', number: '+1 829-555-0101', status: 'Follow Up', product: 'Tom Ford Oud Wood', time: '2 hours ago' },
-  ];
+  const mockLeads: any[] = [];
   return (
     <div className="bg-neutral-dark rounded-xl border border-neutral-border overflow-hidden shadow-xl">
       <div className="px-8 py-6 border-b border-neutral-border bg-neutral-dark/50">
         <h3 className="text-lg font-bold text-slate-100 leading-tight">WhatsApp Leads</h3>
         <p className="text-sm text-slate-400">Track and respond to potential customers</p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-8 bg-background-dark/30">
-        {mockLeads.map((lead) => (
-          <div key={lead.id} className="glass-card p-6 rounded-2xl border border-white/5 relative group hover:border-primary/30 transition-colors">
-            <div className="flex justify-between items-start mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#25D366]/20 text-[#25D366] flex items-center justify-center">
-                  <MessageSquare size={20} />
+      {mockLeads.length === 0 ? (
+        <div className="p-12 text-center text-slate-500">No leads have been captured yet</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-8 bg-background-dark/30">
+          {mockLeads.map((lead) => (
+            <div key={lead.id} className="glass-card p-6 rounded-2xl border border-white/5 relative group hover:border-primary/30 transition-colors">
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#25D366]/20 text-[#25D366] flex items-center justify-center">
+                    <MessageSquare size={20} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-200">{lead.name}</h4>
+                    <p className="text-xs text-slate-400">{lead.time}</p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-bold text-slate-200">{lead.name}</h4>
-                  <p className="text-xs text-slate-400">{lead.time}</p>
-                </div>
+                <span className={`px-2 py-1 text-[10px] font-bold rounded uppercase tracking-wide ${lead.status === 'Hot' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}`}>{lead.status}</span>
               </div>
-              <span className={`px-2 py-1 text-[10px] font-bold rounded uppercase tracking-wide ${lead.status === 'Hot' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}`}>{lead.status}</span>
+              <div className="mb-4">
+                <p className="text-sm text-slate-300"><span className="text-slate-500">Number:</span> {lead.number}</p>
+                <p className="text-sm text-slate-300 mt-1"><span className="text-slate-500">Interested in:</span> <span className="text-primary font-medium">{lead.product}</span></p>
+              </div>
+              <button className="w-full py-2 bg-[#25D366] text-background-dark font-bold rounded-lg text-sm hover:bg-[#25D366]/90 transition-colors uppercase tracking-widest mt-2 flex justify-center items-center gap-2">
+                <MessageSquare size={16} /> Reply on WhatsApp
+              </button>
             </div>
-            <div className="mb-4">
-              <p className="text-sm text-slate-300"><span className="text-slate-500">Number:</span> {lead.number}</p>
-              <p className="text-sm text-slate-300 mt-1"><span className="text-slate-500">Interested in:</span> <span className="text-primary font-medium">{lead.product}</span></p>
-            </div>
-            <button className="w-full py-2 bg-[#25D366] text-background-dark font-bold rounded-lg text-sm hover:bg-[#25D366]/90 transition-colors uppercase tracking-widest mt-2 flex justify-center items-center gap-2">
-              <MessageSquare size={16} /> Reply on WhatsApp
-            </button>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-function SettingsTab() {
+function SettingsTab({ onRefresh }: { onRefresh: () => void }) {
+  const handleReset = async () => {
+    if (confirm('Are you ABSOLUTELY sure you want to delete ALL store data? This action cannot be undone.')) {
+      const token = localStorage.getItem('admin_token');
+      try {
+        const res = await fetch('/api/reset.php', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          alert('Database wiped successfully.');
+          onRefresh();
+        } else {
+          alert('Failed to reset database.');
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
+
   return (
     <div className="glass-card rounded-2xl border border-neutral-border overflow-hidden max-w-2xl mx-auto w-full shadow-2xl">
       <div className="px-8 py-6 border-b border-neutral-border bg-neutral-dark/50">
@@ -620,6 +642,19 @@ function SettingsTab() {
         <button className="mt-4 bg-primary hover:bg-primary/90 text-background-dark py-3.5 rounded-lg text-sm font-bold w-full transition-transform active:scale-95 shadow-lg shadow-primary/20 uppercase tracking-widest">
           Save Changes
         </button>
+
+        <div className="mt-8 border-t border-red-500/20 pt-8">
+          <h4 className="text-red-500 font-bold mb-2 flex items-center gap-2">
+            Danger Zone
+          </h4>
+          <p className="text-slate-400 text-sm mb-4">This will permanently delete all products, categories, and reset all stats to zero. This action cannot be undone.</p>
+          <button
+            onClick={handleReset}
+            className="w-full bg-red-500/10 text-red-500 border border-red-500/20 py-3.5 rounded-lg font-bold hover:bg-red-500 hover:text-white transition-colors"
+          >
+            Factory Reset Database
+          </button>
+        </div>
       </div>
     </div>
   );
