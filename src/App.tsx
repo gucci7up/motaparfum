@@ -36,6 +36,7 @@ export interface AppSettings {
   support_email: string;
   whatsapp_number: string;
   primary_color: string;
+  store_logo?: string;
 }
 
 export default function App() {
@@ -76,6 +77,8 @@ export default function App() {
 
 function PublicCatalog({ onGoToAdmin, settings }: { onGoToAdmin: () => void, settings: AppSettings | null }) {
   const [products, setProducts] = useState<Product[]>([]);
+  const [showLeadModal, setShowLeadModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const lang = getBrowserLanguage();
 
   useEffect(() => {
@@ -95,10 +98,16 @@ function PublicCatalog({ onGoToAdmin, settings }: { onGoToAdmin: () => void, set
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-[60] px-4 md:px-8 py-4 flex items-center justify-between bg-background-dark/80 backdrop-blur-md border-b border-white/5">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-primary rounded-lg text-background-dark">
-            <Diamond className="size-6 font-bold" />
-          </div>
-          <span className="text-lg md:text-xl font-bold tracking-tight uppercase">PerfumeStore <span className="text-primary">RD</span></span>
+          {settings?.store_logo ? (
+            <img src={settings.store_logo} alt={settings?.store_name || 'Logo'} className="h-10 w-auto object-contain" />
+          ) : (
+            <>
+              <div className="p-2 bg-primary rounded-lg text-background-dark">
+                <Diamond className="size-6 font-bold" />
+              </div>
+              <span className="text-lg md:text-xl font-bold tracking-tight uppercase">{settings?.store_name || 'PerfumeStore RD'}</span>
+            </>
+          )}
         </div>
         <div className="hidden md:flex items-center gap-8 glass-card px-8 py-2.5 rounded-full">
           <a className="text-sm font-medium hover:text-primary transition-colors" href="#">{t(lang, 'nav_home')}</a>
@@ -171,9 +180,15 @@ function PublicCatalog({ onGoToAdmin, settings }: { onGoToAdmin: () => void, set
                     <h3 className="text-xl font-bold mb-1">{product.name}</h3>
                     <p className="text-slate-400 text-sm mb-3">{product.brand}</p>
                     <p className="text-primary font-bold text-2xl mb-5">RD$ {product.price.toLocaleString()}</p>
-                    <a href={`https://wa.me/${settings?.whatsapp_number?.replace(/[^0-9]/g, '') || ''}?text=${encodeURIComponent(t(lang, 'hello_whatsapp'))}%20${encodeURIComponent(product.name)}`} target="_blank" className="w-full py-3.5 bg-primary text-background-dark font-black rounded-xl flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(242,185,13,0.4)] transition-all uppercase text-xs">
+                    <button
+                      onClick={() => {
+                        setSelectedProduct(product);
+                        setShowLeadModal(true);
+                      }}
+                      className="w-full py-3.5 bg-primary text-background-dark font-black rounded-xl flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(242,185,13,0.4)] transition-all uppercase text-xs"
+                    >
                       <MessageSquare className="size-5" /> {t(lang, 'buy_whatsapp')}
-                    </a>
+                    </button>
                   </div>
                 </div>
               ))}
@@ -193,10 +208,16 @@ function PublicCatalog({ onGoToAdmin, settings }: { onGoToAdmin: () => void, set
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col items-center gap-6">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/20 rounded-lg text-primary">
-                <Diamond className="size-6 font-bold" />
-              </div>
-              <span className="text-xl font-bold tracking-tight uppercase">{settings?.store_name || 'PerfumeStore RD'}</span>
+              {settings?.store_logo ? (
+                <img src={settings.store_logo} alt={settings?.store_name || 'Logo'} className="h-12 w-auto object-contain" />
+              ) : (
+                <>
+                  <div className="p-2 bg-primary/20 rounded-lg text-primary">
+                    <Diamond className="size-6 font-bold" />
+                  </div>
+                  <span className="text-xl font-bold tracking-tight uppercase">{settings?.store_name || 'PerfumeStore RD'}</span>
+                </>
+              )}
             </div>
             <p className="text-slate-500 max-w-md text-sm">{t(lang, 'footer_desc')}</p>
             <div className="flex gap-4">
@@ -232,6 +253,17 @@ function PublicCatalog({ onGoToAdmin, settings }: { onGoToAdmin: () => void, set
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showLeadModal && selectedProduct && (
+          <LeadCaptureModal
+            product={selectedProduct}
+            settings={settings}
+            onClose={() => setShowLeadModal(false)}
+            lang={lang}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
@@ -374,7 +406,7 @@ function DashboardScreen({ onGoToCatalog, onLogout, settings }: { onGoToCatalog:
           {activeTab === 'dashboard' && <OverviewTab stats={stats} />}
           {activeTab === 'products' && <ProductsTab products={products} categories={categories} onDelete={handleDelete} onRefresh={fetchData} />}
           {activeTab === 'orders' && <OrdersTab />}
-          {activeTab === 'leads' && <LeadsTab />}
+          {activeTab === 'leads' && <LeadsTab settings={settings} />}
           {activeTab === 'settings' && <SettingsTab onRefresh={fetchData} settings={settings} />}
         </div>
 
@@ -581,39 +613,108 @@ function OrdersTab() {
   );
 }
 
-function LeadsTab() {
-  const mockLeads: any[] = [];
+function LeadsTab({ settings }: { settings: AppSettings | null }) {
+  const [leads, setLeads] = useState<any[]>([]);
+
+  const fetchLeads = () => {
+    const token = localStorage.getItem('admin_token');
+    fetch('/api/leads.php', { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(res => res.json())
+      .then(data => Array.isArray(data) ? setLeads(data) : console.error(data))
+      .catch(console.error);
+  };
+
+  useEffect(() => {
+    fetchLeads();
+  }, []);
+
+  const handleStatusChange = async (id: number, status: string) => {
+    const token = localStorage.getItem('admin_token');
+    try {
+      await fetch('/api/leads.php', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ id, status })
+      });
+      fetchLeads();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this lead?')) return;
+    const token = localStorage.getItem('admin_token');
+    try {
+      await fetch('/api/leads.php', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ id })
+      });
+      fetchLeads();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <div className="bg-neutral-dark rounded-xl border border-neutral-border overflow-hidden shadow-xl">
-      <div className="px-8 py-6 border-b border-neutral-border bg-neutral-dark/50">
-        <h3 className="text-lg font-bold text-slate-100 leading-tight">WhatsApp Leads</h3>
-        <p className="text-sm text-slate-400">Track and respond to potential customers</p>
+      <div className="px-8 py-6 border-b border-neutral-border bg-neutral-dark/50 flex justify-between items-center">
+        <div>
+          <h3 className="text-lg font-bold text-slate-100 leading-tight">WhatsApp Leads</h3>
+          <p className="text-sm text-slate-400">Track and respond to potential customers</p>
+        </div>
+        <button onClick={fetchLeads} className="p-2 text-slate-400 hover:text-primary transition-colors hover:bg-white/5 rounded-full"><TrendingUp size={18} /></button>
       </div>
-      {mockLeads.length === 0 ? (
+      {leads.length === 0 ? (
         <div className="p-12 text-center text-slate-500">No leads have been captured yet</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-8 bg-background-dark/30">
-          {mockLeads.map((lead) => (
+          {leads.map((lead) => (
             <div key={lead.id} className="glass-card p-6 rounded-2xl border border-white/5 relative group hover:border-primary/30 transition-colors">
+              <button onClick={() => handleDelete(lead.id)} className="absolute top-2 right-2 p-1.5 text-slate-500 hover:text-red-500 rounded-lg hover:bg-white/5 opacity-0 group-hover:opacity-100 transition-all z-10">
+                <Trash2 size={14} />
+              </button>
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-[#25D366]/20 text-[#25D366] flex items-center justify-center">
-                    <MessageSquare size={20} />
+                    <User size={20} />
                   </div>
                   <div>
                     <h4 className="font-bold text-slate-200">{lead.name}</h4>
-                    <p className="text-xs text-slate-400">{lead.time}</p>
+                    <p className="text-xs text-slate-400">{new Date(lead.created_at).toLocaleDateString()}</p>
                   </div>
                 </div>
-                <span className={`px-2 py-1 text-[10px] font-bold rounded uppercase tracking-wide ${lead.status === 'Hot' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}`}>{lead.status}</span>
               </div>
+
               <div className="mb-4">
-                <p className="text-sm text-slate-300"><span className="text-slate-500">Number:</span> {lead.number}</p>
-                <p className="text-sm text-slate-300 mt-1"><span className="text-slate-500">Interested in:</span> <span className="text-primary font-medium">{lead.product}</span></p>
+                <p className="text-sm text-slate-300"><span className="text-slate-500">Phone:</span> {lead.phone}</p>
+                <p className="text-sm text-slate-300 mt-1"><span className="text-slate-500">Interested in:</span> <span className="text-primary font-medium">{lead.product_name}</span></p>
               </div>
-              <button className="w-full py-2 bg-[#25D366] text-background-dark font-bold rounded-lg text-sm hover:bg-[#25D366]/90 transition-colors uppercase tracking-widest mt-2 flex justify-center items-center gap-2">
-                <MessageSquare size={16} /> Reply on WhatsApp
-              </button>
+
+              <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/5">
+                <select
+                  value={lead.status}
+                  onChange={(e) => handleStatusChange(lead.id, e.target.value)}
+                  className={`text-xs font-bold rounded-lg px-2 py-1 outline-none cursor-pointer appearance-none bg-transparent border 
+                    ${lead.status === 'Hot' || lead.status === 'Contacted' ? 'border-primary text-primary'
+                      : lead.status === 'Lost' ? 'border-red-500 text-red-500'
+                        : 'border-slate-500 text-slate-400'}`}
+                >
+                  <option className="bg-background-dark text-slate-100" value="New">New</option>
+                  <option className="bg-background-dark text-slate-100" value="Contacted">Contacted</option>
+                  <option className="bg-background-dark text-slate-100" value="Hot">Hot</option>
+                  <option className="bg-background-dark text-slate-100" value="Lost">Lost</option>
+                </select>
+
+                <a
+                  href={`https://wa.me/${lead.phone.replace(/[^0-9]/g, '')}?text=Hola%20${encodeURIComponent(lead.name)},%20vimos%20que%20te%20interes%C3%B3%20nuestro%20perfume%20${encodeURIComponent(lead.product_name)}.`}
+                  target="_blank"
+                  className="px-3 py-1.5 bg-[#25D366]/10 text-[#25D366] font-bold rounded-lg text-xs hover:bg-[#25D366] hover:text-white transition-colors uppercase tracking-widest flex items-center gap-1"
+                >
+                  <MessageSquare size={12} /> Chat
+                </a>
+              </div>
             </div>
           ))}
         </div>
@@ -627,21 +728,32 @@ function SettingsTab({ onRefresh, settings }: { onRefresh: () => void, settings:
     store_name: 'Luxury Perfume RD',
     support_email: 'support@motaparfum.store',
     whatsapp_number: '+1 809 555 0199',
-    primary_color: '#F2B90D'
+    primary_color: '#F2B90D',
   });
+  const [logoFile, setLogoFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleSave = async () => {
     setLoading(true);
     const token = localStorage.getItem('admin_token');
+
+    // Use FormData to support file uploads
+    const data = new FormData();
+    data.append('store_name', formData.store_name);
+    data.append('support_email', formData.support_email);
+    data.append('whatsapp_number', formData.whatsapp_number);
+    data.append('primary_color', formData.primary_color);
+    if (logoFile) {
+      data.append('store_logo_file', logoFile);
+    }
+
     try {
       const res = await fetch('/api/settings.php', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(formData)
+        body: data
       });
       if (res.ok) {
         alert('Settings saved successfully! Refreshing...');
@@ -701,6 +813,16 @@ function SettingsTab({ onRefresh, settings }: { onRefresh: () => void, settings:
             <input type="color" value={formData.primary_color} onChange={e => setFormData({ ...formData, primary_color: e.target.value })} className="w-16 h-12 bg-background-dark border border-neutral-border rounded-lg cursor-pointer" />
             <input type="text" value={formData.primary_color} onChange={e => setFormData({ ...formData, primary_color: e.target.value })} className="flex-1 bg-background-dark border border-neutral-border rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none text-slate-100 transition-shadow font-mono" />
           </div>
+        </label>
+
+        <label className="flex flex-col gap-2">
+          <span className="text-sm font-semibold text-slate-400">Store Logo</span>
+          {settings?.store_logo && (
+            <div className="mb-2 p-2 bg-background-dark border border-neutral-border rounded-lg inline-block w-max">
+              <img src={settings.store_logo} alt="Current Logo" className="h-12 w-auto object-contain" />
+            </div>
+          )}
+          <input type="file" accept="image/*" onChange={e => setLogoFile(e.target.files?.[0] || null)} className="w-full bg-background-dark border border-neutral-border rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none text-slate-100 transition-shadow file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-primary file:text-background-dark hover:file:bg-primary/90" />
         </label>
 
         <button onClick={handleSave} disabled={loading} className="mt-4 bg-primary hover:bg-primary/90 text-background-dark py-3.5 rounded-lg text-sm font-bold w-full transition-transform active:scale-95 shadow-lg shadow-primary/20 uppercase tracking-widest disabled:opacity-50">
@@ -1108,6 +1230,69 @@ function CategoryModal({ categories, onClose, onRefresh }: { categories: Categor
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function LeadCaptureModal({ product, settings, onClose, lang }: { product: Product, settings: AppSettings | null, onClose: () => void, lang: 'en' | 'es' }) {
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: any) => {
+    e.preventDefault();
+    if (!name || !phone) return;
+    setLoading(true);
+
+    try {
+      // 1. Save Lead
+      await fetch('/api/leads.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone, product_name: product.name })
+      });
+
+      // 2. Redirect to WhatsApp
+      const waNumber = settings?.whatsapp_number?.replace(/[^0-9]/g, '') || '';
+      const message = `${t(lang, 'hello_whatsapp')} ${product.name} (RD$ ${product.price})`;
+      window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`, '_blank');
+
+      onClose();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-background-dark/90 backdrop-blur-sm" />
+      <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="relative bg-neutral-dark border border-neutral-border p-8 rounded-2xl w-full max-w-md shadow-2xl">
+        <button onClick={onClose} className="absolute top-4 right-4 p-2 text-slate-400 hover:text-primary hover:bg-white/5 rounded-full transition-colors">
+          <X className="size-5" />
+        </button>
+        <div className="mb-8">
+          <div className="p-3 bg-primary/20 text-primary w-fit rounded-xl mb-4">
+            <MessageSquare className="size-6" />
+          </div>
+          <h2 className="text-2xl font-bold mb-2">{lang === 'es' ? '¡Ya casi es tuyo!' : 'Almost yours!'}</h2>
+          <p className="text-slate-400 text-sm">{lang === 'es' ? 'Déjanos tu nombre y número para enviarte los detalles de pago y envío por WhatsApp.' : 'Leave us your name and number to send you payment and shipping details via WhatsApp.'}</p>
+        </div>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <label className="flex flex-col gap-2">
+            <span className="text-sm font-semibold text-slate-400">{lang === 'es' ? 'Tu Nombre' : 'Your Name'}</span>
+            <input type="text" required value={name} onChange={e => setName(e.target.value)} className="w-full bg-background-dark border border-neutral-border rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none text-slate-100 placeholder:text-slate-600" placeholder={lang === 'es' ? 'Ej. Juan Pérez' : 'Ex. John Doe'} />
+          </label>
+          <label className="flex flex-col gap-2">
+            <span className="text-sm font-semibold text-slate-400">{lang === 'es' ? 'Tu WhatsApp' : 'Your WhatsApp'}</span>
+            <input type="tel" required value={phone} onChange={e => setPhone(e.target.value)} className="w-full bg-background-dark border border-neutral-border rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 outline-none text-slate-100 placeholder:text-slate-600" placeholder={lang === 'es' ? 'Ej. 809-555-5555' : 'Ex. +1 555-555-5555'} />
+          </label>
+          <button type="submit" disabled={loading} className="mt-4 bg-[#25D366] hover:bg-[#25D366]/90 text-background-dark py-3.5 rounded-lg text-sm font-bold w-full transition-transform active:scale-95 shadow-lg shadow-[#25D366]/20 uppercase tracking-widest disabled:opacity-50 flex justify-center items-center gap-2">
+            <MessageSquare className="size-5" /> {lang === 'es' ? 'Continuar al Chat' : 'Continue to Chat'}
+          </button>
+        </form>
+      </motion.div>
     </div>
   );
 }

@@ -46,11 +46,15 @@ if ($method === 'GET') {
         exit;
     }
 
-    $data = json_decode(file_get_contents('php://input'), true);
+    if (!empty($_POST)) {
+        $data = $_POST;
+    } else {
+        $data = json_decode(file_get_contents('php://input'), true);
+    }
 
-    if (!$data) {
+    if (!$data && empty($_FILES)) {
         http_response_code(400);
-        echo json_encode(['error' => 'Invalid JSON']);
+        echo json_encode(['error' => 'Invalid data']);
         exit;
     }
 
@@ -58,8 +62,30 @@ if ($method === 'GET') {
         $pdo->beginTransaction();
         $stmt = $pdo->prepare('INSERT INTO settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?');
 
-        foreach ($data as $key => $value) {
-            $stmt->execute([$key, $value, $value]);
+        if ($data) {
+            foreach ($data as $key => $value) {
+                if ($key !== 'store_logo_file') {
+                    $stmt->execute([$key, $value, $value]);
+                }
+            }
+        }
+
+        // Handle file upload
+        if (isset($_FILES['store_logo_file']) && $_FILES['store_logo_file']['error'] === UPLOAD_ERR_OK) {
+            $uploadDir = 'uploads/';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
+
+            $file = $_FILES['store_logo_file'];
+            $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+            $filename = 'logo_' . time() . '.' . $extension;
+            $targetPath = $uploadDir . $filename;
+
+            if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+                $fileUrl = '/api/uploads/' . $filename;
+                $stmt->execute(['store_logo', $fileUrl, $fileUrl]);
+            }
         }
 
         $pdo->commit();
