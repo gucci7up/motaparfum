@@ -17,7 +17,7 @@ services:
       context: .
       dockerfile: Dockerfile.php
     environment:
-      - DB_HOST=mariadb
+      - DB_HOST=144.91.119.49
       - DB_NAME=motaparfum
       - DB_USER=kmota
       - DB_PASS=Gucci1826
