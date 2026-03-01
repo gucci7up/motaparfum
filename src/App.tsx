@@ -85,6 +85,11 @@ function PublicCatalog({ onGoToAdmin, settings }: { onGoToAdmin: () => void, set
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [cart, setCart] = useState<Product[]>([]);
   const [showCartModal, setShowCartModal] = useState(false);
+  const [visibleProducts, setVisibleProducts] = useState({
+    Hombres: 6,
+    Mujeres: 6,
+    Unisex: 6
+  });
   const lang = getBrowserLanguage();
 
   const addToCart = (product: Product) => {
@@ -189,7 +194,7 @@ function PublicCatalog({ onGoToAdmin, settings }: { onGoToAdmin: () => void, set
               <div className="h-px flex-1 bg-gradient-to-r from-white/20 to-transparent"></div>
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-y-16 gap-x-4 md:gap-x-12 mb-20">
-              {products.filter(p => p.gender === gender).map((product) => (
+              {products.filter(p => p.gender === gender).slice(0, visibleProducts[gender as keyof typeof visibleProducts]).map((product) => (
                 <div key={product.id} className="relative group">
                   <div className="relative aspect-square md:aspect-[4/5] flex flex-col items-center justify-center">
                     <div className="absolute bottom-4 md:bottom-12 w-20 md:w-48 h-6 md:h-12 bg-neutral-dark border-t border-primary/30 rounded-[50%] pedestal-shadow transform transition-transform group-hover:scale-110"></div>
@@ -223,13 +228,18 @@ function PublicCatalog({ onGoToAdmin, settings }: { onGoToAdmin: () => void, set
                 </div>
               ))}
             </div>
-            <div className="flex justify-center">
-              <button className="group relative px-10 py-4 border border-primary/40 hover:border-primary rounded-full transition-all duration-300 flex items-center gap-3">
-                <span className="text-primary font-bold tracking-widest uppercase text-sm">{t(lang, 'see_more')}</span>
-                <ArrowRight className="text-primary group-hover:translate-x-1 transition-transform" />
-                <div className="absolute inset-0 rounded-full bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              </button>
-            </div>
+            {products.filter(p => p.gender === gender).length > visibleProducts[gender as keyof typeof visibleProducts] && (
+              <div className="flex justify-center">
+                <button
+                  onClick={() => setVisibleProducts(prev => ({ ...prev, [gender]: prev[gender as keyof typeof visibleProducts] + 6 }))}
+                  className="group relative px-10 py-4 border border-primary/40 hover:border-primary rounded-full transition-all duration-300 flex items-center gap-3"
+                >
+                  <span className="text-primary font-bold tracking-widest uppercase text-sm">{t(lang, 'see_more')}</span>
+                  <ArrowRight className="text-primary group-hover:translate-x-1 transition-transform" />
+                  <div className="absolute inset-0 rounded-full bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                </button>
+              </div>
+            )}
           </section>
         ))}
       </main>
