@@ -101,7 +101,13 @@ function PublicCatalog({ onGoToAdmin, settings }: { onGoToAdmin: () => void, set
   useEffect(() => {
     fetch('/api/products.php')
       .then(res => res.json())
-      .then(data => setProducts(data))
+      .then(data => {
+        if (Array.isArray(data)) {
+          setProducts(data);
+        } else {
+          console.error('Expected array of products but got:', data);
+        }
+      })
       .catch(err => console.error('Error fetching products:', err));
   }, []);
 
@@ -320,7 +326,13 @@ function DashboardScreen({ onGoToCatalog, onLogout, settings }: { onGoToCatalog:
   const fetchData = () => {
     fetch('/api/products.php')
       .then(res => res.json())
-      .then(data => setProducts(data))
+      .then(data => {
+        if (Array.isArray(data)) {
+          setProducts(data);
+        } else {
+          console.error('Expected array of products but got:', data);
+        }
+      })
       .catch(err => console.error('Error fetching products:', err));
 
     fetch('/api/leads.php', { headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` } })
@@ -330,7 +342,13 @@ function DashboardScreen({ onGoToCatalog, onLogout, settings }: { onGoToCatalog:
 
     fetch('/api/categories.php')
       .then(res => res.json())
-      .then(data => setCategories(data))
+      .then(data => {
+        if (Array.isArray(data)) {
+          setCategories(data);
+        } else {
+          console.error('Expected array of categories but got:', data);
+        }
+      })
       .catch(err => console.error('Error fetching categories:', err));
   };
 
