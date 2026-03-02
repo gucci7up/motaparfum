@@ -17,9 +17,9 @@ services:
       context: .
       dockerfile: Dockerfile.php
     environment:
-      - DB_HOST=144.91.119.49
+      - DB_HOST=mysql-motaparfum-ho8oko
       - DB_NAME=motaparfum
-      - DB_USER=kmota
+      - DB_USER=motaparfum
       - DB_PASS=Gucci1826
     networks:
       - internal
