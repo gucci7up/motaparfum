@@ -24,7 +24,19 @@ try {
   $stmt = $pdo->prepare('INSERT INTO admins (username, password) VALUES (?, ?) ON DUPLICATE KEY UPDATE password = ?');
   $stmt->execute([$username, $hash, $hash]);
 
-  echo json_encode(['success' => true, 'message' => "Admin user '$username' initialized successfully with the new password."]);
+  // Test the hash instantly to ensure compatibility with PHP's password_verify on Alpine
+  if (!password_verify('Gucci1826', $hash)) {
+    throw new \Exception("Hash generation failed verification. Native password_verify issue.");
+  }
+
+  echo json_encode([
+    'success' => true,
+    'message' => "Admin user '$username' initialized successfully.",
+    'debug' => [
+      'hash_info' => password_get_info($hash),
+      'tested_ok' => true
+    ]
+  ]);
 } catch (\PDOException $e) {
   http_response_code(500);
   echo json_encode(['error' => 'Database operation failed', 'details' => $e->getMessage()]);
