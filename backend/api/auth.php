@@ -22,18 +22,23 @@ if ($method === 'POST') {
     $stmt->execute([$username]);
     $admin = $stmt->fetch();
 
-    if ($admin && password_verify($password, $admin['password'])) {
-        // Generate a random token
-        $token = bin2hex(random_bytes(32));
+    if ($admin) {
+        if (password_verify($password, $admin['password'])) {
+            // Generate a random token
+            $token = bin2hex(random_bytes(32));
 
-        // Save token in DB
-        $updateStmt = $pdo->prepare('UPDATE admins SET token = ? WHERE id = ?');
-        $updateStmt->execute([$token, $admin['id']]);
+            // Save token in DB
+            $updateStmt = $pdo->prepare('UPDATE admins SET token = ? WHERE id = ?');
+            $updateStmt->execute([$token, $admin['id']]);
 
-        echo json_encode(['token' => $token, 'username' => $username, 'message' => 'Login successful']);
+            echo json_encode(['token' => $token, 'username' => $username, 'message' => 'Login successful']);
+        } else {
+            http_response_code(401);
+            echo json_encode(['error' => 'Invalid password for this user']);
+        }
     } else {
         http_response_code(401);
-        echo json_encode(['error' => 'Invalid credentials']);
+        echo json_encode(['error' => 'User not found in database']);
     }
 } else {
     http_response_code(405);
