@@ -22,6 +22,16 @@ $options = [
 
 try {
     $pdo = new PDO($dsn, $user, $pass, $options);
+    
+    // Check if tables exist and initialize if not (useful for first Dokploy start)
+    $stmt = $pdo->query("SHOW TABLES LIKE 'products'");
+    if ($stmt->rowCount() == 0) {
+        $schemaPath = __DIR__ . '/../schema.sql';
+        if (file_exists($schemaPath)) {
+            $sql = file_get_contents($schemaPath);
+            $pdo->exec($sql);
+        }
+    }
 } catch (\PDOException $e) {
     http_response_code(500);
     echo json_encode(["error" => "Database connection failed", "details" => escapeshellarg($e->getMessage())]);
